@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Mascon Lead Finder - internal government-data lead research tool." />
+  <title>Mascon Lead Finder</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <img class="brand-logo" src="/assets/mascon-logo.png" alt="Mascon Strategic Supply Chain Services" />
+      <div class="header-copy">
+        <p class="eyebrow">Internal Research Tool</p>
+        <h1>Mascon Lead Finder</h1>
+        <p>Search selected government data sources, preview active businesses, and export a clean CSV.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="intro-card" aria-labelledby="intro-title">
+      <div>
+        <p class="eyebrow">Version 1.0</p>
+        <h2 id="intro-title">Build a Northeast lead list in one search</h2>
+        <p>The tool automatically chooses relevant public data sources. Coverage varies by industry and state, so partial-coverage warnings may appear.</p>
+      </div>
+      <div class="privacy-note">
+        <strong>Data policy</strong>
+        <span>Only government-provided fields are exported. No website crawling or email guessing.</span>
+      </div>
+    </section>
+
+    <form id="lead-search-form" class="search-grid" novalidate>
+      <section class="panel panel-wide" aria-labelledby="industries-title">
+        <div class="panel-heading">
+          <div>
+            <span class="step-number">1</span>
+            <div>
+              <h2 id="industries-title">Industries</h2>
+              <p>Select one or more industries. At least one is required.</p>
+            </div>
+          </div>
+          <button class="text-button" type="button" id="clear-industries">Clear all</button>
+        </div>
+        <div id="industry-groups" class="industry-groups"></div>
+        <p id="industry-error" class="field-error" hidden>Please select at least one industry.</p>
+      </section>
+
+      <section class="panel panel-wide" aria-labelledby="operations-title">
+        <div class="panel-heading">
+          <div>
+            <span class="step-number">2</span>
+            <div>
+              <h2 id="operations-title">Business operations</h2>
+              <p>Optional. Leave all unchecked to include all operations.</p>
+            </div>
+          </div>
+        </div>
+        <div id="operation-options" class="checkbox-grid operation-grid"></div>
+      </section>
+
+      <section class="panel panel-wide" aria-labelledby="geography-title">
+        <div class="panel-heading">
+          <div>
+            <span class="step-number">3</span>
+            <div>
+              <h2 id="geography-title">Geography</h2>
+              <p>Use a preset, then adjust individual states as needed.</p>
+            </div>
+          </div>
+        </div>
+        <div id="region-presets" class="preset-row"></div>
+        <div id="state-options" class="checkbox-grid state-grid"></div>
+        <p id="state-error" class="field-error" hidden>Please select at least one state.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="keywords-title">
+        <div class="panel-heading compact">
+          <div>
+            <span class="step-number">4</span>
+            <div>
+              <h2 id="keywords-title">Keywords</h2>
+              <p>Optional, comma-separated terms.</p>
+            </div>
+          </div>
+        </div>
+        <label class="field-label" for="include-keywords">Include keywords</label>
+        <input id="include-keywords" name="includeKeywords" type="text" placeholder="barcode, packaging, laboratory" autocomplete="off" />
+        <p class="field-help">A record may match any included term.</p>
+
+        <label class="field-label spaced" for="exclude-keywords">Exclude keywords</label>
+        <input id="exclude-keywords" name="excludeKeywords" type="text" placeholder="residential, consulting" autocomplete="off" />
+        <p class="field-help">A record is removed if it contains any excluded term.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="limit-title">
+        <div class="panel-heading compact">
+          <div>
+            <span class="step-number">5</span>
+            <div>
+              <h2 id="limit-title">Result limit</h2>
+              <p>Choose the size of the exported list.</p>
+            </div>
+          </div>
+        </div>
+        <div id="limit-options" class="limit-options" role="radiogroup" aria-label="Result limit"></div>
+        <div class="search-actions">
+          <button id="search-button" class="primary-button" type="submit">
+            <span>Search leads</span>
+            <span aria-hidden="true">→</span>
+          </button>
+          <button id="reset-button" class="secondary-button" type="button">Reset</button>
+        </div>
+      </section>
+    </form>
+
+    <section id="loading-panel" class="status-panel" hidden aria-live="polite">
+      <div class="loader" aria-hidden="true"></div>
+      <div>
+        <h2>Preparing your lead list</h2>
+        <p id="loading-message">Preparing search criteria…</p>
+      </div>
+    </section>
+
+    <section id="results-panel" class="results-panel" hidden aria-labelledby="results-title">
+      <div class="results-header">
+        <div>
+          <p class="eyebrow">Search complete</p>
+          <h2 id="results-title">Lead list preview</h2>
+          <p id="results-summary"></p>
+        </div>
+        <button id="export-button" class="primary-button" type="button">Export full CSV</button>
+      </div>
+
+      <div id="source-summary" class="source-summary"></div>
+      <div id="warning-list" class="warning-list" hidden></div>
+
+      <div class="table-shell">
+        <table id="preview-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="table-note">Preview shows the first 10 rows. The CSV includes all returned rows up to the selected limit.</p>
+    </section>
+
+    <section id="empty-panel" class="empty-panel" hidden>
+      <h2>No matching active records found</h2>
+      <p>Try a broader industry selection, fewer keyword restrictions, or a different state combination.</p>
+    </section>
+
+    <section id="error-panel" class="error-panel" hidden role="alert">
+      <h2>Search could not be completed</h2>
+      <p id="error-message"></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Internal Lead Research Tool</span>
+    <span>Mascon Inc.</span>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
