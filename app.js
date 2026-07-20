@@ -1,498 +1,206 @@
-// Mascon Lead Finder browser bundle.
-// Presets are bundled here so the page does not depend on a separate /shared module.
+"use strict";
 
 const NORTHEAST_STATES = [
-  { code: "MA", name: "Massachusetts" },
-  { code: "NH", name: "New Hampshire" },
-  { code: "CT", name: "Connecticut" },
-  { code: "NY", name: "New York" },
-  { code: "RI", name: "Rhode Island" },
-  { code: "NJ", name: "New Jersey" },
-  { code: "VT", name: "Vermont" },
-  { code: "ME", name: "Maine" },
+  { code: "MA", name: "Massachusetts" }, { code: "NH", name: "New Hampshire" },
+  { code: "CT", name: "Connecticut" }, { code: "NY", name: "New York" },
+  { code: "RI", name: "Rhode Island" }, { code: "NJ", name: "New Jersey" },
+  { code: "VT", name: "Vermont" }, { code: "ME", name: "Maine" },
   { code: "PA", name: "Pennsylvania" },
 ];
-
 const STATE_PRESETS = [
-  { id: "new-england", label: "New England", states: ["MA", "CT", "RI", "NH", "VT", "ME"] },
-  { id: "new-england-ny-nj", label: "New England + NY + NJ", states: ["MA", "CT", "RI", "NH", "VT", "ME", "NY", "NJ"] },
-  { id: "northeast", label: "Entire Northeast", states: NORTHEAST_STATES.map((state) => state.code) },
+  { id: "new-england", label: "New England", states: ["MA","CT","RI","NH","VT","ME"] },
+  { id: "new-england-ny-nj", label: "New England + NY + NJ", states: ["MA","CT","RI","NH","VT","ME","NY","NJ"] },
+  { id: "northeast", label: "Entire Northeast", states: NORTHEAST_STATES.map(s => s.code) },
   { id: "clear", label: "Clear", states: [] },
 ];
-
-const STATE_PRIORITY = {
-  MA: 1,
-  NH: 2,
-  CT: 2,
-  NY: 3,
-  RI: 4,
-  NJ: 5,
-  VT: 6,
-  ME: 7,
-  PA: 8,
-};
+const STATE_PRIORITY = { MA:1, NH:2, CT:2, NY:3, RI:4, NJ:5, VT:6, ME:7, PA:8 };
 
 const INDUSTRY_GROUPS = [
-  {
-    id: "health-life-sciences",
-    label: "Healthcare & Life Sciences",
-    industries: [
-      { id: "hospitals-health-systems", label: "Hospitals and health systems", naics: ["622"], searchTerms: ["hospital", "health system"], nppesTerms: ["General Acute Care Hospital"], defaultOperations: ["clinic-facility"] },
-      { id: "clinics-physician-groups", label: "Clinics and physician groups", naics: ["6211", "6214", "62149"], searchTerms: ["clinic", "medical group", "physician"], nppesTerms: ["Clinic/Center", "Multi-Specialty"], defaultOperations: ["clinic-facility"] },
-      { id: "dental-practices", label: "Dental practices", naics: ["6212"], searchTerms: ["dental", "dentist", "orthodont"], nppesTerms: ["Dentist"], defaultOperations: ["clinic-facility"] },
-      { id: "rehabilitation-therapy", label: "Rehabilitation and therapy", naics: ["62134", "621498", "623"], searchTerms: ["rehabilitation", "physical therapy", "therapy"], nppesTerms: ["Physical Therapist", "Rehabilitation"], defaultOperations: ["clinic-facility"] },
-      { id: "laboratories", label: "Laboratories", naics: ["6215", "54138", "541714"], searchTerms: ["laboratory", "diagnostic", "testing lab"], nppesTerms: ["Clinical Medical Laboratory"], defaultOperations: ["clinic-facility", "office-service"] },
-      { id: "medical-device-companies", label: "Medical-device companies", naics: ["334510", "334517", "339112", "339113"], searchTerms: ["medical device", "medical equipment", "surgical"], defaultOperations: ["manufacturer", "distributor"] },
-      { id: "pharma-biotechnology", label: "Pharmaceutical and biotechnology", naics: ["3254", "541714", "541715"], searchTerms: ["pharmaceutical", "biotech", "biotechnology", "therapeutics"], defaultOperations: ["manufacturer", "office-service"] },
-      { id: "senior-care-home-health", label: "Senior care and home health", naics: ["6216", "6231", "6233"], searchTerms: ["home health", "senior care", "nursing", "assisted living"], nppesTerms: ["Home Health", "Skilled Nursing Facility", "Assisted Living Facility"], defaultOperations: ["clinic-facility"] },
-      { id: "veterinary-services", label: "Veterinary services", naics: ["54194"], searchTerms: ["veterinary", "animal hospital", "pet clinic"], defaultOperations: ["clinic-facility", "office-service"] },
-    ],
-  },
-  {
-    id: "manufacturing-industrial",
-    label: "Manufacturing & Industrial",
-    industries: [
-      { id: "general-manufacturing", label: "General manufacturing", naics: ["31", "32", "33"], searchTerms: ["manufacturing", "manufacturer", "industries"], defaultOperations: ["manufacturer"] },
-      { id: "electronics-manufacturing", label: "Electronics manufacturing", naics: ["334"], searchTerms: ["electronics", "semiconductor", "circuit"], defaultOperations: ["manufacturer"] },
-      { id: "automotive-transport-equipment", label: "Automotive and transportation equipment", naics: ["336"], searchTerms: ["automotive", "vehicle", "transportation equipment"], defaultOperations: ["manufacturer"] },
-      { id: "medical-device-manufacturing", label: "Medical-device manufacturing", naics: ["334510", "334517", "339112", "339113"], searchTerms: ["medical device", "medical equipment", "surgical instrument"], defaultOperations: ["manufacturer"] },
-      { id: "food-beverage-processing", label: "Food and beverage processing", naics: ["311", "3121"], searchTerms: ["food processing", "beverage", "foods", "bottling"], defaultOperations: ["manufacturer"] },
-      { id: "packaging-printing", label: "Packaging and printing", naics: ["322", "323", "326111"], searchTerms: ["packaging", "printing", "labels", "carton"], defaultOperations: ["manufacturer"] },
-      { id: "plastics-rubber", label: "Plastics and rubber", naics: ["326"], searchTerms: ["plastics", "rubber", "polymer"], defaultOperations: ["manufacturer"] },
-      { id: "metal-fabrication-machining", label: "Metal fabrication and machining", naics: ["331", "332"], searchTerms: ["metal", "fabrication", "machining", "machine shop"], defaultOperations: ["manufacturer"] },
-      { id: "chemical-manufacturing", label: "Chemical manufacturing", naics: ["325"], searchTerms: ["chemical", "chemicals", "coatings"], defaultOperations: ["manufacturer"] },
-      { id: "textiles-apparel", label: "Textiles and apparel", naics: ["313", "314", "315", "316"], searchTerms: ["textile", "apparel", "garment", "fabric"], defaultOperations: ["manufacturer"] },
-      { id: "industrial-equipment-machinery", label: "Industrial equipment and machinery", naics: ["333"], searchTerms: ["industrial equipment", "machinery", "machine"], defaultOperations: ["manufacturer", "distributor"] },
-    ],
-  },
-  {
-    id: "supply-chain-commerce",
-    label: "Supply Chain & Commerce",
-    industries: [
-      { id: "warehousing-fulfillment", label: "Warehousing and fulfillment", naics: ["493"], searchTerms: ["warehouse", "warehousing", "fulfillment"], defaultOperations: ["warehouse"] },
-      { id: "logistics-freight", label: "Logistics and freight", naics: ["488", "492"], searchTerms: ["logistics", "freight", "shipping"], defaultOperations: ["fleet-operator", "warehouse"] },
-      { id: "trucking-fleet", label: "Trucking and fleet operations", naics: ["484", "485"], searchTerms: ["trucking", "transport", "carrier", "fleet"], defaultOperations: ["fleet-operator"] },
-      { id: "wholesale-distribution", label: "Wholesale distribution", naics: ["42"], searchTerms: ["wholesale", "distributor", "distribution"], defaultOperations: ["distributor", "warehouse"] },
-      { id: "importers-exporters", label: "Importers and exporters", naics: ["423", "424", "425"], searchTerms: ["import", "export", "trading"], defaultOperations: ["distributor", "office-service"] },
-      { id: "retail-chains", label: "Retail chains", naics: ["44", "45"], searchTerms: ["retail", "stores", "market"], defaultOperations: ["retailer", "multi-location"] },
-      { id: "ecommerce-businesses", label: "E-commerce businesses", naics: ["454110", "459"], searchTerms: ["ecommerce", "e-commerce", "online store"], defaultOperations: ["retailer", "warehouse"] },
-      { id: "grocery-convenience", label: "Grocery and convenience stores", naics: ["4451", "445131"], searchTerms: ["grocery", "supermarket", "convenience"], defaultOperations: ["retailer", "multi-location"] },
-    ],
-  },
-  {
-    id: "food-hospitality-consumer",
-    label: "Food, Hospitality & Consumer Services",
-    industries: [
-      { id: "restaurants", label: "Restaurants", naics: ["7225"], searchTerms: ["restaurant", "cafe", "kitchen"], defaultOperations: ["restaurant"] },
-      { id: "hotels-hospitality", label: "Hotels and hospitality", naics: ["7211"], searchTerms: ["hotel", "hospitality", "lodging", "inn"], defaultOperations: ["multi-location", "office-service"] },
-      { id: "catering-food-service", label: "Catering and food service", naics: ["7223"], searchTerms: ["catering", "food service"], defaultOperations: ["restaurant", "office-service"] },
-      { id: "salons-spas", label: "Salons and spas", naics: ["812112", "812113", "812199"], searchTerms: ["salon", "spa", "beauty"], defaultOperations: ["office-service"] },
-      { id: "fitness-wellness", label: "Fitness and wellness", naics: ["71394", "81219"], searchTerms: ["fitness", "gym", "wellness"], defaultOperations: ["office-service", "multi-location"] },
-      { id: "entertainment-recreation", label: "Entertainment and recreation", naics: ["71"], searchTerms: ["entertainment", "recreation", "amusement"], defaultOperations: ["office-service", "multi-location"] },
-      { id: "laundry-cleaning", label: "Laundry and cleaning services", naics: ["56172", "8123"], searchTerms: ["laundry", "cleaning", "janitorial"], defaultOperations: ["office-service"] },
-    ],
-  },
-  {
-    id: "construction-property-facilities",
-    label: "Construction, Property & Facilities",
-    industries: [
-      { id: "construction-companies", label: "Construction companies", naics: ["23"], searchTerms: ["construction", "builders", "building"], defaultOperations: ["contractor"] },
-      { id: "contractors-trades", label: "Contractors and trades", naics: ["238"], searchTerms: ["contractor", "electric", "plumbing", "roofing", "hvac"], defaultOperations: ["contractor"] },
-      { id: "property-management", label: "Property management", naics: ["53131"], searchTerms: ["property management", "properties"], defaultOperations: ["office-service", "multi-location"] },
-      { id: "commercial-real-estate", label: "Commercial real estate", naics: ["5311", "5312", "5313"], searchTerms: ["commercial real estate", "realty", "properties"], defaultOperations: ["office-service"] },
-      { id: "building-maintenance", label: "Building maintenance", naics: ["56121", "56172", "56179"], searchTerms: ["facility services", "maintenance", "janitorial"], defaultOperations: ["contractor", "office-service"] },
-      { id: "security-services", label: "Security services", naics: ["56161"], searchTerms: ["security", "guard", "alarm"], defaultOperations: ["office-service"] },
-      { id: "waste-recycling", label: "Waste management and recycling", naics: ["562"], searchTerms: ["waste", "recycling", "disposal"], defaultOperations: ["fleet-operator", "warehouse"] },
-    ],
-  },
-  {
-    id: "technology-business-services",
-    label: "Technology & Business Services",
-    industries: [
-      { id: "software-it-services", label: "Software and IT services", naics: ["5112", "518", "5415"], searchTerms: ["software", "information technology", "IT services"], defaultOperations: ["office-service"] },
-      { id: "systems-integrators", label: "Systems integrators", naics: ["541512", "541519"], searchTerms: ["systems integration", "integrator", "automation"], defaultOperations: ["office-service", "distributor"] },
-      { id: "telecommunications", label: "Telecommunications", naics: ["517"], searchTerms: ["telecommunications", "telecom", "communications"], defaultOperations: ["office-service"] },
-      { id: "professional-services", label: "Professional services", naics: ["54"], searchTerms: ["professional services", "services group"], defaultOperations: ["office-service"] },
-      { id: "consulting", label: "Consulting", naics: ["5416"], searchTerms: ["consulting", "advisory"], defaultOperations: ["office-service"] },
-      { id: "staffing-recruitment", label: "Staffing and recruitment", naics: ["5613"], searchTerms: ["staffing", "recruiting", "employment"], defaultOperations: ["office-service"] },
-      { id: "financial-services", label: "Financial services", naics: ["52"], searchTerms: ["financial", "capital", "bank", "credit"], defaultOperations: ["office-service"] },
-      { id: "insurance", label: "Insurance", naics: ["524"], searchTerms: ["insurance", "assurance"], defaultOperations: ["office-service"] },
-      { id: "legal-accounting", label: "Legal and accounting services", naics: ["5411", "5412"], searchTerms: ["law", "legal", "accounting", "CPA"], defaultOperations: ["office-service"] },
-    ],
-  },
-  {
-    id: "education-institutional",
-    label: "Education & Institutions",
-    industries: [
-      { id: "schools-universities", label: "Schools and universities", naics: ["6111", "6112", "6113"], searchTerms: ["school", "college", "university", "academy"], defaultOperations: ["clinic-facility", "multi-location"] },
-      { id: "childcare-centers", label: "Childcare centers", naics: ["624410"], searchTerms: ["child care", "daycare", "early learning"], defaultOperations: ["clinic-facility"] },
-      { id: "nonprofits", label: "Nonprofits", naics: ["813"], searchTerms: ["foundation", "nonprofit", "association"], defaultOperations: ["office-service"] },
-      { id: "research-institutions", label: "Research institutions", naics: ["5417"], searchTerms: ["research", "institute", "laboratory"], defaultOperations: ["office-service", "clinic-facility"] },
-      { id: "municipal-public-facilities", label: "Municipal and public facilities", naics: ["92"], searchTerms: ["municipal", "public works", "authority"], defaultOperations: ["clinic-facility", "office-service"] },
-    ],
-  },
+  { id:"blade-customers", label:"Potential Blade Customers", bladeFocus:true, industries:[
+    { id:"blade-meat-poultry", label:"Meat and poultry slaughtering & processing", naics:["311611","311612","311613","311615"], searchTerms:["meat","poultry","slaughter","packing","butcher"], defaultOperations:["manufacturer"] },
+    { id:"blade-seafood", label:"Seafood preparation and packaging", naics:["311710"], searchTerms:["seafood","fish processing","fish packing","shellfish"], defaultOperations:["manufacturer"] },
+    { id:"blade-prepared-foods", label:"Prepared foods, produce and bakery processing", naics:["3114","3118","3119"], searchTerms:["prepared foods","food processing","bakery","produce packing"], defaultOperations:["manufacturer"] },
+    { id:"blade-paper-packaging", label:"Paper, corrugated and packaging converting", naics:["322","323"], searchTerms:["packaging","corrugated","paper converting","printing","labels"], defaultOperations:["manufacturer"] },
+    { id:"blade-plastics-film", label:"Plastics, film, foam and rubber converting", naics:["326"], searchTerms:["plastics","plastic film","foam","rubber","polymer"], defaultOperations:["manufacturer"] },
+    { id:"blade-textile-apparel", label:"Textile, fabric and apparel cutting", naics:["313","314","315"], searchTerms:["textile","fabric","apparel","garment","cut and sew"], defaultOperations:["manufacturer"] },
+    { id:"blade-leather-footwear", label:"Leather, hide and footwear processing", naics:["316"], searchTerms:["leather","hide","footwear","shoe manufacturing"], defaultOperations:["manufacturer"] },
+    { id:"blade-wood-products", label:"Wood products, veneer, lumber and furniture", naics:["321","337"], searchTerms:["wood products","lumber","veneer","furniture manufacturing"], defaultOperations:["manufacturer"] },
+    { id:"blade-metal-fabrication", label:"Metal fabrication, machining and stamping", naics:["331","332"], searchTerms:["metal fabrication","machining","stamping","machine shop"], defaultOperations:["manufacturer"] },
+    { id:"blade-recycling", label:"Recycling, scrap and waste processing", naics:["562"], searchTerms:["recycling","scrap","waste processing","materials recovery"], defaultOperations:["warehouse","fleet-operator"] },
+    { id:"blade-industrial-machinery", label:"Industrial cutting equipment and machinery manufacturers", naics:["333"], searchTerms:["industrial machinery","cutting equipment","machinery","machine manufacturing"], defaultOperations:["manufacturer"] },
+    { id:"blade-auto-tire-gasket", label:"Automotive, tire, gasket and transportation manufacturing", naics:["3262","336"], searchTerms:["automotive","tire","gasket","transportation equipment"], defaultOperations:["manufacturer"] },
+    { id:"blade-medical-surgical", label:"Medical and surgical device manufacturing", naics:["334510","334517","339112","339113"], searchTerms:["medical device","surgical instrument","medical equipment"], defaultOperations:["manufacturer"] },
+  ]},
+  { id:"health-life-sciences", label:"Healthcare & Life Sciences", industries:[
+    { id:"hospitals-health-systems", label:"Hospitals and health systems", naics:["622"], searchTerms:["hospital","health system"], nppesTerms:["General Acute Care Hospital"], defaultOperations:["clinic-facility"] },
+    { id:"clinics-physician-groups", label:"Clinics and physician groups", naics:["6211","6214","62149"], searchTerms:["clinic","medical group","physician"], nppesTerms:["Clinic/Center","Multi-Specialty"], defaultOperations:["clinic-facility"] },
+    { id:"dental-practices", label:"Dental practices", naics:["6212"], searchTerms:["dental","dentist","orthodont"], nppesTerms:["Dentist"], defaultOperations:["clinic-facility"] },
+    { id:"rehabilitation-therapy", label:"Rehabilitation and therapy", naics:["62134","621498","623"], searchTerms:["rehabilitation","physical therapy","therapy"], nppesTerms:["Physical Therapist","Rehabilitation"], defaultOperations:["clinic-facility"] },
+    { id:"laboratories", label:"Laboratories", naics:["6215","54138","541714"], searchTerms:["laboratory","diagnostic","testing lab"], nppesTerms:["Clinical Medical Laboratory"], defaultOperations:["clinic-facility","office-service"] },
+    { id:"medical-device-companies", label:"Medical-device companies", naics:["334510","334517","339112","339113"], searchTerms:["medical device","medical equipment","surgical"], defaultOperations:["manufacturer","distributor"] },
+    { id:"pharma-biotechnology", label:"Pharmaceutical and biotechnology", naics:["3254","541714","541715"], searchTerms:["pharmaceutical","biotech","biotechnology","therapeutics"], defaultOperations:["manufacturer","office-service"] },
+    { id:"senior-care-home-health", label:"Senior care and home health", naics:["6216","6231","6233"], searchTerms:["home health","senior care","nursing","assisted living"], nppesTerms:["Home Health","Skilled Nursing Facility","Assisted Living Facility"], defaultOperations:["clinic-facility"] },
+    { id:"veterinary-services", label:"Veterinary services", naics:["54194"], searchTerms:["veterinary","animal hospital","pet clinic"], defaultOperations:["clinic-facility","office-service"] },
+  ]},
+  { id:"manufacturing-industrial", label:"Manufacturing & Industrial", industries:[
+    { id:"general-manufacturing", label:"General manufacturing", naics:["31","32","33"], searchTerms:["manufacturing","manufacturer","industries"], defaultOperations:["manufacturer"] },
+    { id:"electronics-manufacturing", label:"Electronics manufacturing", naics:["334"], searchTerms:["electronics","semiconductor","circuit"], defaultOperations:["manufacturer"] },
+    { id:"automotive-transport-equipment", label:"Automotive and transportation equipment", naics:["336"], searchTerms:["automotive","vehicle","transportation equipment"], defaultOperations:["manufacturer"] },
+    { id:"medical-device-manufacturing", label:"Medical-device manufacturing", naics:["334510","334517","339112","339113"], searchTerms:["medical device","medical equipment","surgical instrument"], defaultOperations:["manufacturer"] },
+    { id:"food-beverage-processing", label:"Food and beverage processing", naics:["311","3121"], searchTerms:["food processing","beverage","foods","bottling"], defaultOperations:["manufacturer"] },
+    { id:"packaging-printing", label:"Packaging and printing", naics:["322","323","326111"], searchTerms:["packaging","printing","labels","carton"], defaultOperations:["manufacturer"] },
+    { id:"plastics-rubber", label:"Plastics and rubber", naics:["326"], searchTerms:["plastics","rubber","polymer"], defaultOperations:["manufacturer"] },
+    { id:"metal-fabrication-machining", label:"Metal fabrication and machining", naics:["331","332"], searchTerms:["metal","fabrication","machining","machine shop"], defaultOperations:["manufacturer"] },
+    { id:"chemical-manufacturing", label:"Chemical manufacturing", naics:["325"], searchTerms:["chemical","chemicals","coatings"], defaultOperations:["manufacturer"] },
+    { id:"textiles-apparel", label:"Textiles and apparel", naics:["313","314","315","316"], searchTerms:["textile","apparel","garment","fabric"], defaultOperations:["manufacturer"] },
+    { id:"industrial-equipment-machinery", label:"Industrial equipment and machinery", naics:["333"], searchTerms:["industrial equipment","machinery","machine"], defaultOperations:["manufacturer","distributor"] },
+  ]},
+  { id:"supply-chain-commerce", label:"Supply Chain & Commerce", industries:[
+    { id:"warehousing-fulfillment", label:"Warehousing and fulfillment", naics:["493"], searchTerms:["warehouse","warehousing","fulfillment"], defaultOperations:["warehouse"] },
+    { id:"logistics-freight", label:"Logistics and freight", naics:["488","492"], searchTerms:["logistics","freight","shipping"], defaultOperations:["fleet-operator","warehouse"] },
+    { id:"trucking-fleet", label:"Trucking and fleet operations", naics:["484","485"], searchTerms:["trucking","transport","carrier","fleet"], defaultOperations:["fleet-operator"] },
+    { id:"wholesale-distribution", label:"Wholesale distribution", naics:["42"], searchTerms:["wholesale","distributor","distribution"], defaultOperations:["distributor","warehouse"] },
+    { id:"importers-exporters", label:"Importers and exporters", naics:["423","424","425"], searchTerms:["import","export","trading"], defaultOperations:["distributor","office-service"] },
+    { id:"retail-chains", label:"Retail chains", naics:["44","45"], searchTerms:["retail","stores","market"], defaultOperations:["retailer","multi-location"] },
+    { id:"ecommerce-businesses", label:"E-commerce businesses", naics:["454110","459"], searchTerms:["ecommerce","e-commerce","online store"], defaultOperations:["retailer","warehouse"] },
+    { id:"grocery-convenience", label:"Grocery and convenience stores", naics:["4451","445131"], searchTerms:["grocery","supermarket","convenience"], defaultOperations:["retailer","multi-location"] },
+  ]},
+  { id:"food-hospitality-consumer", label:"Food, Hospitality & Consumer Services", industries:[
+    { id:"restaurants", label:"Restaurants", naics:["7225"], searchTerms:["restaurant","cafe","kitchen"], defaultOperations:["restaurant"] },
+    { id:"hotels-hospitality", label:"Hotels and hospitality", naics:["7211"], searchTerms:["hotel","hospitality","lodging","inn"], defaultOperations:["multi-location","office-service"] },
+    { id:"catering-food-service", label:"Catering and food service", naics:["7223"], searchTerms:["catering","food service"], defaultOperations:["restaurant","office-service"] },
+    { id:"salons-spas", label:"Salons and spas", naics:["812112","812113","812199"], searchTerms:["salon","spa","beauty"], defaultOperations:["office-service"] },
+    { id:"fitness-wellness", label:"Fitness and wellness", naics:["71394","81219"], searchTerms:["fitness","gym","wellness"], defaultOperations:["office-service","multi-location"] },
+    { id:"entertainment-recreation", label:"Entertainment and recreation", naics:["71"], searchTerms:["entertainment","recreation","amusement"], defaultOperations:["office-service","multi-location"] },
+    { id:"laundry-cleaning", label:"Laundry and cleaning services", naics:["56172","8123"], searchTerms:["laundry","cleaning","janitorial"], defaultOperations:["office-service"] },
+  ]},
+  { id:"construction-property-facilities", label:"Construction, Property & Facilities", industries:[
+    { id:"construction-companies", label:"Construction companies", naics:["23"], searchTerms:["construction","builders","building"], defaultOperations:["contractor"] },
+    { id:"contractors-trades", label:"Contractors and trades", naics:["238"], searchTerms:["contractor","electric","plumbing","roofing","hvac"], defaultOperations:["contractor"] },
+    { id:"property-management", label:"Property management", naics:["53131"], searchTerms:["property management","properties"], defaultOperations:["office-service","multi-location"] },
+    { id:"commercial-real-estate", label:"Commercial real estate", naics:["5311","5312","5313"], searchTerms:["commercial real estate","realty","properties"], defaultOperations:["office-service"] },
+    { id:"building-maintenance", label:"Building maintenance", naics:["56121","56172","56179"], searchTerms:["facility services","maintenance","janitorial"], defaultOperations:["contractor","office-service"] },
+    { id:"security-services", label:"Security services", naics:["56161"], searchTerms:["security","guard","alarm"], defaultOperations:["office-service"] },
+    { id:"waste-recycling", label:"Waste management and recycling", naics:["562"], searchTerms:["waste","recycling","disposal"], defaultOperations:["fleet-operator","warehouse"] },
+  ]},
+  { id:"technology-business-services", label:"Technology & Business Services", industries:[
+    { id:"software-it-services", label:"Software and IT services", naics:["5112","518","5415"], searchTerms:["software","information technology","IT services"], defaultOperations:["office-service"] },
+    { id:"systems-integrators", label:"Systems integrators", naics:["541512","541519"], searchTerms:["systems integration","integrator","automation"], defaultOperations:["office-service","distributor"] },
+    { id:"telecommunications", label:"Telecommunications", naics:["517"], searchTerms:["telecommunications","telecom","communications"], defaultOperations:["office-service"] },
+    { id:"professional-services", label:"Professional services", naics:["54"], searchTerms:["professional services","services group"], defaultOperations:["office-service"] },
+    { id:"consulting", label:"Consulting", naics:["5416"], searchTerms:["consulting","advisory"], defaultOperations:["office-service"] },
+    { id:"staffing-recruitment", label:"Staffing and recruitment", naics:["5613"], searchTerms:["staffing","recruiting","employment"], defaultOperations:["office-service"] },
+    { id:"financial-services", label:"Financial services", naics:["52"], searchTerms:["financial","capital","bank","credit"], defaultOperations:["office-service"] },
+    { id:"insurance", label:"Insurance", naics:["524"], searchTerms:["insurance","assurance"], defaultOperations:["office-service"] },
+    { id:"legal-accounting", label:"Legal and accounting services", naics:["5411","5412"], searchTerms:["law","legal","accounting","CPA"], defaultOperations:["office-service"] },
+  ]},
+  { id:"education-institutional", label:"Education & Institutions", industries:[
+    { id:"schools-universities", label:"Schools and universities", naics:["6111","6112","6113"], searchTerms:["school","college","university","academy"], defaultOperations:["clinic-facility","multi-location"] },
+    { id:"childcare-centers", label:"Childcare centers", naics:["624410"], searchTerms:["child care","daycare","early learning"], defaultOperations:["clinic-facility"] },
+    { id:"nonprofits", label:"Nonprofits", naics:["813"], searchTerms:["foundation","nonprofit","association"], defaultOperations:["office-service"] },
+    { id:"research-institutions", label:"Research institutions", naics:["5417"], searchTerms:["research","institute","laboratory"], defaultOperations:["office-service","clinic-facility"] },
+    { id:"municipal-public-facilities", label:"Municipal and public facilities", naics:["92"], searchTerms:["municipal","public works","authority"], defaultOperations:["clinic-facility","office-service"] },
+  ]},
 ];
 
 const BUSINESS_OPERATIONS = [
-  { id: "manufacturer", label: "Manufacturer" },
-  { id: "warehouse", label: "Warehouse" },
-  { id: "distributor", label: "Distributor" },
-  { id: "retailer", label: "Retailer" },
-  { id: "clinic-facility", label: "Clinic / Facility" },
-  { id: "restaurant", label: "Restaurant" },
-  { id: "fleet-operator", label: "Fleet operator" },
-  { id: "contractor", label: "Contractor" },
-  { id: "office-service", label: "Office / Service provider" },
-  { id: "multi-location", label: "Multi-location business" },
+  {id:"manufacturer",label:"Manufacturer"},{id:"warehouse",label:"Warehouse"},{id:"distributor",label:"Distributor"},
+  {id:"retailer",label:"Retailer"},{id:"clinic-facility",label:"Clinic / Facility"},{id:"restaurant",label:"Restaurant"},
+  {id:"fleet-operator",label:"Fleet operator"},{id:"contractor",label:"Contractor"},{id:"office-service",label:"Office / Service provider"},
+  {id:"multi-location",label:"Multi-location business"},
 ];
-
-const INDUSTRIES = INDUSTRY_GROUPS.flatMap((group) =>
-  group.industries.map((industry) => ({ ...industry, groupId: group.id, groupLabel: group.label })),
-);
-
-const INDUSTRY_BY_ID = Object.fromEntries(INDUSTRIES.map((industry) => [industry.id, industry]));
-const OPERATION_BY_ID = Object.fromEntries(BUSINESS_OPERATIONS.map((operation) => [operation.id, operation]));
-
-const ECHO_INDUSTRY_IDS = new Set([
-  "general-manufacturing", "electronics-manufacturing", "automotive-transport-equipment",
-  "medical-device-manufacturing", "food-beverage-processing", "packaging-printing",
-  "plastics-rubber", "metal-fabrication-machining", "chemical-manufacturing",
-  "textiles-apparel", "industrial-equipment-machinery", "warehousing-fulfillment",
-  "logistics-freight", "trucking-fleet", "wholesale-distribution", "waste-recycling",
-  "construction-companies", "contractors-trades", "building-maintenance",
-  "laboratories", "medical-device-companies", "pharma-biotechnology",
-]);
-
-const FMCSA_INDUSTRY_IDS = new Set(["logistics-freight", "trucking-fleet"]);
-
-const NPPES_INDUSTRY_IDS = new Set(
-  INDUSTRIES.filter((industry) => Array.isArray(industry.nppesTerms) && industry.nppesTerms.length > 0)
-    .map((industry) => industry.id),
-);
-
+const INDUSTRIES = INDUSTRY_GROUPS.flatMap(g => g.industries.map(i => ({...i,groupId:g.id,groupLabel:g.label})));
+const INDUSTRY_BY_ID = Object.fromEntries(INDUSTRIES.map(i => [i.id,i]));
+const OPERATION_BY_ID = Object.fromEntries(BUSINESS_OPERATIONS.map(o => [o.id,o]));
+const NPPES_IDS = new Set(INDUSTRIES.filter(i => i.nppesTerms?.length).map(i=>i.id));
+const ECHO_IDS = new Set(INDUSTRIES.filter(i => i.naics?.some(n => /^(23|31|32|33|42|48|49|54|56|62)/.test(n))).map(i=>i.id));
 const CSV_COLUMNS = [
-  ["Parent Company Name", "parentCompanyName"],
-  ["Location Name", "locationName"],
-  ["Company Name", "companyName"],
-  ["Industry", "industry"],
-  ["Business Operation", "businessOperation"],
-  ["NAICS Code", "naicsCode"],
-  ["Business Type", "businessType"],
-  ["Address", "address"],
-  ["City", "city"],
-  ["State", "state"],
-  ["ZIP", "zip"],
-  ["Phone", "phone"],
-  ["Email", "email"],
-  ["Contact Person", "contactPerson"],
-  ["Website", "website"],
-  ["Company Status", "companyStatus"],
-  ["Registration Date", "registrationDate"],
-  ["Data Source", "dataSource"],
-  ["Source Record ID", "sourceRecordId"],
+  ["Company Name","companyName"],["Industry","industry"],["Business Type","businessType"],["Address","address"],
+  ["City","city"],["State","state"],["ZIP","zip"],["Phone","phone"],["Email","email"],
+  ["Contact Person","contactPerson"],["Website","website"],["Company Status","companyStatus"],
+  ["Registration Date","registrationDate"],["Data Source","dataSource"],["Source Record ID","sourceRecordId"],
 ];
 
-
-const state = {
-  results: [],
-  query: null,
-  loadingTimer: null,
-};
-
+const $ = s => document.querySelector(s);
 const elements = {
-  form: document.querySelector("#lead-search-form"),
-  industryGroups: document.querySelector("#industry-groups"),
-  operationOptions: document.querySelector("#operation-options"),
-  stateOptions: document.querySelector("#state-options"),
-  regionPresets: document.querySelector("#region-presets"),
-  limitOptions: document.querySelector("#limit-options"),
-  clearIndustries: document.querySelector("#clear-industries"),
-  resetButton: document.querySelector("#reset-button"),
-  searchButton: document.querySelector("#search-button"),
-  industryError: document.querySelector("#industry-error"),
-  stateError: document.querySelector("#state-error"),
-  loadingPanel: document.querySelector("#loading-panel"),
-  loadingMessage: document.querySelector("#loading-message"),
-  resultsPanel: document.querySelector("#results-panel"),
-  resultsSummary: document.querySelector("#results-summary"),
-  sourceSummary: document.querySelector("#source-summary"),
-  warningList: document.querySelector("#warning-list"),
-  exportButton: document.querySelector("#export-button"),
-  previewTable: document.querySelector("#preview-table"),
-  emptyPanel: document.querySelector("#empty-panel"),
-  errorPanel: document.querySelector("#error-panel"),
-  errorMessage: document.querySelector("#error-message"),
-  includeKeywords: document.querySelector("#include-keywords"),
-  excludeKeywords: document.querySelector("#exclude-keywords"),
+  form:$("#lead-search-form"), industryGroups:$("#industry-groups"), operationOptions:$("#operation-options"),
+  stateOptions:$("#state-options"), regionPresets:$("#region-presets"), limitOptions:$("#limit-options"),
+  clearIndustries:$("#clear-industries"), resetButton:$("#reset-button"), searchButton:$("#search-button"),
+  industryError:$("#industry-error"), stateError:$("#state-error"), loadingPanel:$("#loading-panel"),
+  loadingMessage:$("#loading-message"), sourceStatus:$("#source-status"), resultsPanel:$("#results-panel"),
+  resultsSummary:$("#results-summary"), sourceSummary:$("#source-summary"), warningList:$("#warning-list"),
+  exportButton:$("#export-button"), previewTable:$("#preview-table"), emptyPanel:$("#empty-panel"),
+  errorPanel:$("#error-panel"), errorMessage:$("#error-message"), includeKeywords:$("#include-keywords"),
+  excludeKeywords:$("#exclude-keywords"),
 };
+const appState = {results:[],query:null};
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
+function clean(v){return String(v??"").replace(/\s+/g," ").trim();}
+function unique(a){return [...new Set(a.filter(Boolean))];}
+function selected(name){return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value);}
+function parseKeywords(v){return unique(v.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean));}
+function normalizeName(v){return clean(v).toUpperCase().replace(/\b(INCORPORATED|INC|LLC|L L C|CORPORATION|CORP|COMPANY|CO|LIMITED|LTD)\b\.?/g,"").replace(/[^A-Z0-9]/g,"");}
+function normalizeAddress(v){return clean(v).toUpperCase().replace(/\b(STREET|ST|ROAD|RD|AVENUE|AVE|BOULEVARD|BLVD|DRIVE|DR|LANE|LN|HIGHWAY|HWY)\b\.?/g,"").replace(/[^A-Z0-9]/g,"");}
+function joinAddress(...parts){return parts.map(clean).filter(Boolean).join(", ");}
+function hashString(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0).toString(16);}
+function soqlEscape(v){return String(v).replaceAll("'","''");}
+function compressPrefixes(prefixes){const sorted=unique(prefixes.map(x=>String(x).replace(/\D/g,"")).filter(Boolean)).sort((a,b)=>a.length-b.length);return sorted.filter((p,i)=>!sorted.slice(0,i).some(q=>p.startsWith(q)));}
+function matchIndustryIdsFromNaics(naicsValue, selectedIds){const codes=String(naicsValue??"").match(/\d{2,6}/g)||[];return selectedIds.filter(id=>(INDUSTRY_BY_ID[id]?.naics||[]).some(prefix=>codes.some(code=>code.startsWith(prefix))));}
+function inferredOperations(naics, industryIds){const out=new Set(industryIds.flatMap(id=>INDUSTRY_BY_ID[id]?.defaultOperations||[]));const c=String(naics||"").replace(/\D/g,"");if(/^(31|32|33)/.test(c))out.add("manufacturer");if(/^42/.test(c))out.add("distributor");if(/^(44|45)/.test(c))out.add("retailer");if(/^(48|49)/.test(c)){out.add("fleet-operator");out.add("warehouse");}if(/^493/.test(c))out.add("warehouse");if(/^62/.test(c))out.add("clinic-facility");if(/^72/.test(c))out.add("restaurant");if(/^23/.test(c))out.add("contractor");return [...out];}
+function firstField(row,names){for(const n of names){if(row[n]!=null&&clean(row[n]))return clean(row[n]);}return "";}
 
-function renderIndustryGroups() {
-  elements.industryGroups.innerHTML = INDUSTRY_GROUPS.map((group, index) => `
-    <details class="industry-group" ${index === 0 ? "open" : ""}>
-      <summary>
-        <span>${escapeHtml(group.label)} <span class="industry-count">${group.industries.length} categories</span></span>
-      </summary>
-      <div class="industry-options">
-        ${group.industries.map((industry) => `
-          <label class="check-option">
-            <input type="checkbox" name="industries" value="${industry.id}" />
-            <span>${escapeHtml(industry.label)}</span>
-          </label>
-        `).join("")}
-      </div>
-    </details>
-  `).join("");
-}
+async function fetchJson(url, timeout=25000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeout);try{const r=await fetch(url,{signal:ctrl.signal,headers:{Accept:"application/json"}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json();}finally{clearTimeout(timer);}}
+function jsonp(url, timeout=30000){return new Promise((resolve,reject)=>{const cb=`masconJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;const script=document.createElement("script");const timer=setTimeout(()=>finish(new Error("Timed out")),timeout);function finish(err,data){clearTimeout(timer);delete window[cb];script.remove();err?reject(err):resolve(data);}window[cb]=data=>finish(null,data);script.onerror=()=>finish(new Error("JSONP request failed"));const u=new URL(url);u.searchParams.set("callback",cb);script.src=u.toString();document.head.append(script);});}
 
-function renderOperations() {
-  elements.operationOptions.innerHTML = BUSINESS_OPERATIONS.map((operation) => `
-    <label class="check-option">
-      <input type="checkbox" name="operations" value="${operation.id}" />
-      <span>${escapeHtml(operation.label)}</span>
-    </label>
-  `).join("");
-}
+function setSourceStatus(name,status,text=""){let el=document.querySelector(`[data-source-status="${name}"]`);if(!el){el=document.createElement("span");el.dataset.sourceStatus=name;elements.sourceStatus.append(el);}el.className=`source-pill ${status}`;el.textContent=text||name;}
 
-function renderStates() {
-  elements.stateOptions.innerHTML = NORTHEAST_STATES.map((item) => `
-    <label class="check-option">
-      <input type="checkbox" name="states" value="${item.code}" />
-      <span><strong>${item.code}</strong><br>${escapeHtml(item.name)}</span>
-    </label>
-  `).join("");
-  elements.regionPresets.innerHTML = STATE_PRESETS.map((preset) => `
-    <button type="button" class="preset-button" data-preset="${preset.id}">${escapeHtml(preset.label)}</button>
-  `).join("");
-}
+async function searchConnecticut(q){const source="Connecticut Business Registry";if(!q.states.includes("CT"))return {source,records:[],warnings:[],skipped:true};const prefixes=compressPrefixes(q.industries.flatMap(id=>INDUSTRY_BY_ID[id]?.naics||[]));if(!prefixes.length)return {source,records:[],warnings:["Connecticut registry skipped because no NAICS mapping was available."]};const where=`status='Active' AND upper(billingstate)='CT' AND (${prefixes.map(p=>`naics_code like '${soqlEscape(p)}%'`).join(" OR ")})`;const params=new URLSearchParams({"$select":"id,name,business_type,status,sub_status,accountnumber,billingstreet,billing_unit,billingcity,billingstate,billingpostalcode,business_email_address,date_registration,naics_code,naics_sub_code","$where":where,"$limit":String(Math.min(1000,Math.max(300,q.limit*4))),"$order":"date_registration DESC"});const rows=await fetchJson(`https://data.ct.gov/resource/n7gp-d28j.json?${params}`);const records=rows.map(row=>{const ids=matchIndustryIdsFromNaics(row.naics_code,q.industries);return {companyName:clean(row.name),industryIds:ids,naicsCode:clean(row.naics_code),businessType:clean(row.naics_sub_code||row.business_type),address:joinAddress(row.billingstreet,row.billing_unit),city:clean(row.billingcity),state:"CT",zip:clean(row.billingpostalcode),phone:"",email:clean(row.business_email_address),contactPerson:"",website:"",companyStatus:clean(row.status)==="Active"?"Active":"",registrationDate:clean(row.date_registration).slice(0,10),dataSources:[source],sourceRecordIds:[clean(row.accountnumber||row.id)]};}).filter(r=>r.companyName&&r.companyStatus==="Active"&&r.industryIds.length);return {source,records,warnings:["Connecticut industry matching uses self-reported NAICS codes; businesses without NAICS data are not returned."]};}
 
-function renderLimits() {
-  elements.limitOptions.innerHTML = [50, 100, 200, 300].map((limit) => `
-    <div class="limit-option">
-      <input id="limit-${limit}" type="radio" name="limit" value="${limit}" ${limit === 300 ? "checked" : ""} />
-      <label for="limit-${limit}">${limit}</label>
-    </div>
-  `).join("");
-}
+function nyAddress(row){if(clean(row.location_state).toUpperCase()==="NY")return {address:joinAddress(row.location_address_1,row.location_address_2),city:clean(row.location_city),state:"NY",zip:clean(row.location_zip)};return {address:joinAddress(row.dos_process_address_1,row.dos_process_address_2),city:clean(row.dos_process_city),state:clean(row.dos_process_state).toUpperCase(),zip:clean(row.dos_process_zip)};}
+async function searchNewYork(q){const source="New York Active Corporations";if(!q.states.includes("NY"))return {source,records:[],warnings:[],skipped:true};const jobs=q.industries.slice(0,18).map(id=>({id,terms:unique(INDUSTRY_BY_ID[id]?.searchTerms||[]).slice(0,5)})).filter(x=>x.terms.length);const per=Math.min(220,Math.max(40,Math.ceil(q.limit/Math.max(jobs.length,1))*3));const batches=[];for(const job of jobs){const clause=job.terms.map(t=>`upper(current_entity_name) like '%${soqlEscape(t.toUpperCase())}%'`).join(" OR ");const params=new URLSearchParams({"$select":"dos_id,current_entity_name,initial_dos_filing_date,entity_type,dos_process_address_1,dos_process_address_2,dos_process_city,dos_process_state,dos_process_zip,chairman_name,location_address_1,location_address_2,location_city,location_state,location_zip","$where":`(${clause}) AND (upper(location_state)='NY' OR upper(dos_process_state)='NY')`,"$limit":String(per),"$order":"initial_dos_filing_date DESC"});try{const rows=await fetchJson(`https://data.ny.gov/resource/n9v6-gdp6.json?${params}`);batches.push(...rows.map(row=>{const a=nyAddress(row);return {companyName:clean(row.current_entity_name),industryIds:[job.id],naicsCode:"",businessType:clean(row.entity_type),address:a.address,city:a.city,state:a.state,zip:a.zip,phone:"",email:"",contactPerson:clean(row.chairman_name),website:"",companyStatus:"Active",registrationDate:clean(row.initial_dos_filing_date).slice(0,10),dataSources:[source],sourceRecordIds:[clean(row.dos_id)]};}).filter(r=>r.companyName&&r.state==="NY"));}catch(e){/* continue other industries */}}
+return {source,records:batches,warnings:["New York does not publish NAICS codes in this dataset; industry matching is based on words in the corporation name and may be incomplete."]};}
 
-function selectedValues(name) {
-  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
-}
+async function searchPennsylvania(q){const source="Pennsylvania Current Registered Businesses";if(!q.states.includes("PA"))return {source,records:[],warnings:[],skipped:true};const jobs=q.industries.slice(0,16).map(id=>({id,terms:unique(INDUSTRY_BY_ID[id]?.searchTerms||[]).slice(0,3)})).filter(x=>x.terms.length);const per=Math.min(180,Math.max(35,Math.ceil(q.limit/Math.max(jobs.length,1))*3));const out=[];for(const job of jobs){for(const term of job.terms){const params=new URLSearchParams({"$q":term,"$limit":String(per)});try{const rows=await fetchJson(`https://data.pa.gov/resource/3urc-uaba.json?${params}`);for(const row of rows){const companyName=firstField(row,["business_name","businessname","name","entity_name","legal_name","business"]);if(!companyName)continue;const stateVal=firstField(row,["state","business_state","address_state","physical_state"]).toUpperCase()||"PA";if(stateVal!=="PA")continue;const address=firstField(row,["street_address","business_address","address","address_1","physical_address","street"]);const city=firstField(row,["city","business_city","municipality","physical_city"]);const zip=firstField(row,["zip","zip_code","postal_code","business_zip","physical_zip"]);const rid=firstField(row,["business_id","entity_number","id","account_id","registration_number"])||hashString(JSON.stringify(row));out.push({companyName,industryIds:[job.id],naicsCode:firstField(row,["naics","naics_code"]),businessType:firstField(row,["business_type","entity_type","license_type","department"]),address,city,state:"PA",zip,phone:firstField(row,["phone","telephone"]),email:firstField(row,["email","email_address"]),contactPerson:firstField(row,["contact_name","owner_name","officer_name"]),website:firstField(row,["website","url"]),companyStatus:"Active",registrationDate:firstField(row,["registration_date","formation_date","date_registered"]).slice(0,10),dataSources:[source],sourceRecordIds:[rid]});}}catch(e){/* continue */}}}
+return {source,records:out,warnings:["Pennsylvania's current-business view does not provide consistent industry fields; matching uses the portal's full-text search and may be broad."]};}
 
-function parseKeywords(value) {
-  return [...new Set(value.split(",").map((term) => term.trim()).filter(Boolean))];
-}
+function nppesAddress(result){const a=(result.addresses||[]).find(x=>x.address_purpose==="LOCATION")||(result.addresses||[])[0]||{};return a;}
+async function searchNppes(q){const source="CMS NPPES NPI Registry";const ids=q.industries.filter(id=>NPPES_IDS.has(id));if(!ids.length)return {source,records:[],warnings:[],skipped:true};const jobs=[];for(const id of ids)for(const st of q.states)for(const taxonomy of (INDUSTRY_BY_ID[id]?.nppesTerms||[]))jobs.push({id,st,taxonomy});const capped=jobs.slice(0,20);const per=Math.min(200,Math.max(25,Math.ceil(q.limit/Math.max(capped.length,1))*3));const out=[];for(const job of capped){const params=new URLSearchParams({version:"2.1",enumeration_type:"NPI-2",state:job.st,taxonomy_description:job.taxonomy,limit:String(per),skip:"0"});try{const data=await fetchJson(`https://npiregistry.cms.hhs.gov/api/?${params}`);for(const result of (data.results||[])){const b=result.basic||{},a=nppesAddress(result);const official=[b.authorized_official_first_name,b.authorized_official_last_name].map(clean).filter(Boolean).join(" ");const status=clean(b.status).toUpperCase()==="A"?"Active":"";if(!status)continue;out.push({companyName:clean(b.organization_name),industryIds:[job.id],naicsCode:"",businessType:(result.taxonomies||[]).map(x=>clean(x.desc)).filter(Boolean).join("; "),address:joinAddress(a.address_1,a.address_2),city:clean(a.city),state:clean(a.state).toUpperCase(),zip:clean(a.postal_code).slice(0,10),phone:clean(a.telephone_number),email:"",contactPerson:official?`${official}${b.authorized_official_title_or_position?` — ${clean(b.authorized_official_title_or_position)}`:""}`:"",website:"",companyStatus:"Active",registrationDate:clean(b.enumeration_date),dataSources:[source],sourceRecordIds:[clean(result.number)]});}}catch(e){throw new Error("NPPES browser request was blocked or unavailable");}}
+return {source,records:out.filter(r=>r.companyName&&q.states.includes(r.state)),warnings:jobs.length>capped.length?["NPPES source requests were capped to keep the browser search responsive."]:[]};}
 
-function setStatePreset(presetId) {
-  const preset = STATE_PRESETS.find((item) => item.id === presetId);
-  if (!preset) return;
-  const selected = new Set(preset.states);
-  document.querySelectorAll('input[name="states"]').forEach((input) => {
-    input.checked = selected.has(input.value);
-  });
-  updatePresetButtons();
-}
+function echoFacilities(data){const r=data?.Results||data?.results||data;return r?.Facilities||r?.facilities||[];}
+async function searchEcho(q){const source="EPA ECHO Active Facilities";const ids=q.industries.filter(id=>ECHO_IDS.has(id));if(!ids.length)return {source,records:[],warnings:[],skipped:true};const two=compressPrefixes(ids.flatMap(id=>INDUSTRY_BY_ID[id]?.naics||[]).map(n=>n.slice(0,2))).filter(x=>x.length===2).slice(0,18);if(!two.length)return {source,records:[],warnings:[],skipped:true};const out=[];for(const st of q.states){const params=new URLSearchParams({output:"JSONP",p_st:st,p_ncs:two.join(","),p_act:"Y",tablelist:"Y",responseset:String(Math.min(1000,Math.max(300,q.limit*4))),qcolumns:"3,4,5,6,11,31,122,124"});try{const data=await jsonp(`https://echodata.epa.gov/echo/echo_rest_services.get_facilities?${params}`);for(const f of echoFacilities(data)){const naics=clean(f.FacNaicsCodes||f.facNaicsCodes||f.CWANaics||"");const industryIds=matchIndustryIdsFromNaics(naics,ids);const active=clean(f.FacActiveFlag||f.facActiveFlag).toUpperCase()==="Y";const federal=clean(f.FacFederalFlg||f.facFederalFlg).toUpperCase()==="Y";if(!active||federal||!industryIds.length)continue;out.push({companyName:clean(f.FacName||f.facName),industryIds,naicsCode:naics,businessType:"EPA-regulated operating facility",address:clean(f.FacStreet||f.facStreet),city:clean(f.FacCity||f.facCity),state:clean(f.FacState||f.facState).toUpperCase(),zip:clean(f.FacZip||f.facZip),phone:"",email:"",contactPerson:"",website:"",companyStatus:"Active",registrationDate:"",dataSources:[source],sourceRecordIds:[clean(f.RegistryID||f.registryID||f.SourceID)]});}}catch(e){throw new Error("EPA ECHO browser request was blocked or unavailable");}}
+return {source,records:out,warnings:["EPA ECHO covers active regulated facilities, not every private business in an industry."]};}
 
-function updatePresetButtons() {
-  const current = new Set(selectedValues("states"));
-  document.querySelectorAll(".preset-button").forEach((button) => {
-    const preset = STATE_PRESETS.find((item) => item.id === button.dataset.preset);
-    const isActive = preset && preset.states.length === current.size && preset.states.every((code) => current.has(code));
-    button.classList.toggle("active", Boolean(isActive));
-  });
-}
+function textHaystack(r){return [r.companyName,r.businessType,r.address,r.city,r.state,r.zip,r.naicsCode,...r.industryIds.map(id=>INDUSTRY_BY_ID[id]?.label||"")].join(" ").toLowerCase();}
+function applyFilters(records,q){return records.filter(r=>{if(r.companyStatus!=="Active"||!q.states.includes(r.state)||!r.industryIds.length)return false;r.businessOperationIds=inferredOperations(r.naicsCode,r.industryIds);if(q.operations.length&&!r.businessOperationIds.some(x=>q.operations.includes(x)))return false;const h=textHaystack(r);if(q.includeKeywords.length&&!q.includeKeywords.some(k=>h.includes(k)))return false;if(q.excludeKeywords.some(k=>h.includes(k)))return false;return true;});}
+function mergeRecords(records){const map=new Map();for(const r of records){const key=`${normalizeName(r.companyName)}|${normalizeAddress(r.address)}|${clean(r.zip).slice(0,5)}|${r.state}`;if(!map.has(key)){map.set(key,{...r,industryIds:[...r.industryIds],businessOperationIds:[...(r.businessOperationIds||[])]});continue;}const x=map.get(key);for(const field of ["businessType","address","city","zip","phone","email","contactPerson","website","registrationDate","naicsCode"])if(!x[field]&&r[field])x[field]=r[field];x.industryIds=unique([...x.industryIds,...r.industryIds]);x.businessOperationIds=unique([...x.businessOperationIds,...(r.businessOperationIds||[])]);x.dataSources=unique([...x.dataSources,...r.dataSources]);x.sourceRecordIds=unique([...x.sourceRecordIds,...r.sourceRecordIds]);}return [...map.values()];}
+function sortRecords(a,b){return (STATE_PRIORITY[a.state]||99)-(STATE_PRIORITY[b.state]||99)||a.city.localeCompare(b.city)||a.companyName.localeCompare(b.companyName);}
+function balance(records,q){const groups=new Map(q.industries.map(id=>[id,records.filter(r=>r.industryIds.includes(id)).sort(sortRecords)]));const used=new Set(),out=[];while(out.length<q.limit){let added=false;for(const id of q.industries){const group=groups.get(id)||[];while(group.length){const r=group.shift();const k=`${normalizeName(r.companyName)}|${normalizeAddress(r.address)}|${r.zip}|${r.state}`;if(used.has(k))continue;used.add(k);out.push(r);added=true;break;}if(out.length>=q.limit)break;}if(!added)break;}if(out.length<q.limit){for(const r of records.sort(sortRecords)){const k=`${normalizeName(r.companyName)}|${normalizeAddress(r.address)}|${r.zip}|${r.state}`;if(!used.has(k)){used.add(k);out.push(r);}if(out.length>=q.limit)break;}}return out;}
+function finalize(records,q){return balance(mergeRecords(applyFilters(records,q)),q).map(r=>({...r,industry:r.industryIds.map(id=>INDUSTRY_BY_ID[id]?.label||id).join("; "),businessOperation:r.businessOperationIds.map(id=>OPERATION_BY_ID[id]?.label||id).join("; "),dataSource:r.dataSources.join("; "),sourceRecordId:r.sourceRecordIds.join("; ")}));}
 
-function resetPanels() {
-  elements.resultsPanel.hidden = true;
-  elements.emptyPanel.hidden = true;
-  elements.errorPanel.hidden = true;
-  elements.warningList.innerHTML = "";
-  elements.warningList.hidden = true;
-  elements.emptyPanel.querySelectorAll(".warning-list").forEach((node) => node.remove());
-}
+function renderIndustries(){elements.industryGroups.innerHTML=INDUSTRY_GROUPS.map((g,i)=>`<details class="industry-group ${g.bladeFocus?"blade-group":""}" ${i===0?"open":""}><summary><span>${esc(g.label)}${g.bladeFocus?'<span class="group-badge">Blade prospects</span>':''}<span class="industry-count">${g.industries.length} categories</span></span></summary><div class="industry-options">${g.industries.map(x=>`<label class="check-option"><input type="checkbox" name="industries" value="${x.id}"/><span>${esc(x.label)}</span></label>`).join("")}</div></details>`).join("");}
+function renderOperations(){elements.operationOptions.innerHTML=BUSINESS_OPERATIONS.map(o=>`<label class="check-option"><input type="checkbox" name="operations" value="${o.id}"/><span>${esc(o.label)}</span></label>`).join("");}
+function renderStates(){elements.stateOptions.innerHTML=NORTHEAST_STATES.map(s=>`<label class="check-option"><input type="checkbox" name="states" value="${s.code}"/><span><strong>${s.code}</strong><br>${esc(s.name)}</span></label>`).join("");elements.regionPresets.innerHTML=STATE_PRESETS.map(p=>`<button type="button" class="preset-button" data-preset="${p.id}">${esc(p.label)}</button>`).join("");}
+function renderLimits(){elements.limitOptions.innerHTML=[50,100,200,300].map(n=>`<div class="limit-option"><input id="limit-${n}" type="radio" name="limit" value="${n}" ${n===300?"checked":""}/><label for="limit-${n}">${n}</label></div>`).join("");}
+function setPreset(id){const p=STATE_PRESETS.find(x=>x.id===id);if(!p)return;const s=new Set(p.states);document.querySelectorAll('input[name="states"]').forEach(x=>x.checked=s.has(x.value));updatePresetButtons();}
+function updatePresetButtons(){const s=new Set(selected("states"));document.querySelectorAll(".preset-button").forEach(b=>{const p=STATE_PRESETS.find(x=>x.id===b.dataset.preset);b.classList.toggle("active",!!p&&p.states.length===s.size&&p.states.every(x=>s.has(x)));});}
+function buildQuery(){return {industries:selected("industries"),operations:selected("operations"),states:selected("states"),includeKeywords:parseKeywords(elements.includeKeywords.value),excludeKeywords:parseKeywords(elements.excludeKeywords.value),limit:Number(document.querySelector('input[name="limit"]:checked')?.value||300)};}
+function validate(q){const a=q.industries.length>0,b=q.states.length>0;elements.industryError.hidden=a;elements.stateError.hidden=b;if(!a)$("#industries-title").scrollIntoView({behavior:"smooth",block:"center"});return a&&b;}
+function resetPanels(){elements.resultsPanel.hidden=true;elements.emptyPanel.hidden=true;elements.errorPanel.hidden=true;elements.warningList.hidden=true;elements.warningList.innerHTML="";elements.sourceStatus.innerHTML="";}
+function renderWarnings(w){elements.warningList.hidden=!w.length;elements.warningList.innerHTML=w.map(x=>`<div class="warning-item">${esc(x)}</div>`).join("");}
+function renderTable(rows){const cols=CSV_COLUMNS;elements.previewTable.querySelector("thead").innerHTML=`<tr>${cols.map(c=>`<th>${esc(c[0])}</th>`).join("")}</tr>`;elements.previewTable.querySelector("tbody").innerHTML=rows.slice(0,10).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[1]]||"")}</td>`).join("")}</tr>`).join("");}
+function renderResults(records,sources,warnings){appState.results=records;if(!records.length){elements.emptyPanel.hidden=false;renderWarnings(warnings);return;}elements.resultsPanel.hidden=false;elements.resultsSummary.textContent=`${records.length.toLocaleString()} active location-level records are ready. Previewing the first ${Math.min(10,records.length)}.`;elements.sourceSummary.innerHTML=`<strong>Sources contributing records:</strong>${esc(sources.join(" · ")||"None")}`;renderWarnings(warnings);renderTable(records);elements.resultsPanel.scrollIntoView({behavior:"smooth",block:"start"});}
+function csvEscape(v){const t=String(v??"");return /[",\n\r]/.test(t)?`"${t.replaceAll('"','""')}"`:t;}
+function exportCsv(){if(!appState.results.length)return;const h=CSV_COLUMNS.map(c=>csvEscape(c[0])).join(",");const body=appState.results.map(r=>CSV_COLUMNS.map(c=>csvEscape(r[c[1]]||"")).join(",")).join("\r\n");const blob=new Blob([`\uFEFF${h}\r\n${body}`],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");const inds=appState.query.industries.slice(0,2).map(id=>INDUSTRY_BY_ID[id]?.label||id).join("-").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase();a.href=url;a.download=`mascon_leads_${inds||"leads"}_${appState.query.states.join("-").toLowerCase()}_${new Date().toISOString().slice(0,10)}.csv`;document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);}
 
-function setLoading(isLoading) {
-  elements.loadingPanel.hidden = !isLoading;
-  elements.searchButton.disabled = isLoading;
-  if (!isLoading && state.loadingTimer) {
-    clearInterval(state.loadingTimer);
-    state.loadingTimer = null;
-  }
-}
+function coverageWarnings(q){const w=[];const general=q.industries.filter(id=>!NPPES_IDS.has(id)&&!ECHO_IDS.has(id));const states=q.states.filter(s=>!["CT","NY","PA"].includes(s));if(general.length&&states.length)w.push(`Partial coverage: generic active-business registry data is not browser-accessible for ${states.join(", ")}. Those states may still return healthcare or EPA-regulated industrial facilities.`);if(q.states.includes("NJ"))w.push("New Jersey does not currently contribute a broad browser-accessible active-business registry in this static edition.");return w;}
+async function runSource(name,fn,q){setSourceStatus(name,"","Searching…");try{const x=await fn(q);if(x.skipped){setSourceStatus(name,"warn",`${name}: not selected`);return x;}setSourceStatus(name,x.records.length?"ok":"warn",`${name}: ${x.records.length} rows`);return x;}catch(e){setSourceStatus(name,"fail",`${name}: unavailable`);return {source:name,records:[],warnings:[`${name} could not be reached from this browser. The remaining sources were still searched.`],failed:true};}}
+async function handleSubmit(ev){ev.preventDefault();const q=buildQuery();if(!validate(q))return;appState.query=q;appState.results=[];resetPanels();elements.loadingPanel.hidden=false;elements.searchButton.disabled=true;elements.loadingMessage.textContent="Selecting compatible public data sources…";const jobs=[
+  ["CT Registry",searchConnecticut],["NY Active Corporations",searchNewYork],["PA Current Businesses",searchPennsylvania],
+  ["CMS NPPES",searchNppes],["EPA ECHO",searchEcho],
+];try{const results=await Promise.all(jobs.map(([n,f])=>runSource(n,f,q)));elements.loadingMessage.textContent="Combining active records and preparing the CSV…";const all=results.flatMap(x=>x.records||[]);const records=finalize(all,q);const sources=results.filter(x=>x.records?.length).map(x=>x.source);const warnings=unique([...coverageWarnings(q),...results.flatMap(x=>x.warnings||[])]);renderResults(records,sources,warnings);}catch(e){elements.errorPanel.hidden=false;elements.errorMessage.textContent=e instanceof Error?e.message:"Unexpected error";}finally{elements.loadingPanel.hidden=true;elements.searchButton.disabled=false;}}
+function resetForm(){elements.form.reset();setPreset("new-england");$("#limit-300").checked=true;elements.industryError.hidden=true;elements.stateError.hidden=true;resetPanels();appState.results=[];appState.query=null;window.scrollTo({top:0,behavior:"smooth"});}
 
-function startLoadingMessages() {
-  const messages = [
-    "Preparing search criteria…",
-    "Selecting relevant government sources…",
-    "Searching active business and facility records…",
-    "Standardizing fields across data sources…",
-    "Removing duplicate physical locations…",
-    "Balancing results across selected industries…",
-    "Preparing the CSV preview…",
-  ];
-  let index = 0;
-  elements.loadingMessage.textContent = messages[index];
-  state.loadingTimer = setInterval(() => {
-    index = Math.min(index + 1, messages.length - 1);
-    elements.loadingMessage.textContent = messages[index];
-  }, 1350);
-}
-
-function validateQuery(query) {
-  const industryValid = query.industries.length > 0;
-  const stateValid = query.states.length > 0;
-  elements.industryError.hidden = industryValid;
-  elements.stateError.hidden = stateValid;
-  if (!industryValid) document.querySelector("#industries-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
-  return industryValid && stateValid;
-}
-
-function buildQuery() {
-  return {
-    industries: selectedValues("industries"),
-    operations: selectedValues("operations"),
-    states: selectedValues("states"),
-    includeKeywords: parseKeywords(elements.includeKeywords.value),
-    excludeKeywords: parseKeywords(elements.excludeKeywords.value),
-    limit: Number(document.querySelector('input[name="limit"]:checked')?.value || 300),
-  };
-}
-
-function renderWarnings(warnings = []) {
-  elements.warningList.hidden = warnings.length === 0;
-  elements.warningList.innerHTML = warnings.map((warning) => `<div class="warning-item">${escapeHtml(warning)}</div>`).join("");
-}
-
-function renderTable(rows) {
-  const previewColumns = CSV_COLUMNS.filter(([header]) => [
-    "Company Name", "Industry", "Business Operation", "Business Type", "Address", "City", "State", "ZIP",
-    "Phone", "Email", "Contact Person", "Website", "Company Status", "Registration Date", "Data Source",
-  ].includes(header));
-
-  elements.previewTable.querySelector("thead").innerHTML = `<tr>${previewColumns.map(([header]) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`;
-  elements.previewTable.querySelector("tbody").innerHTML = rows.slice(0, 10).map((row) => `
-    <tr>${previewColumns.map(([, key]) => `<td>${escapeHtml(row[key] || "")}</td>`).join("")}</tr>
-  `).join("");
-}
-
-function renderResults(payload) {
-  state.results = payload.records || [];
-  if (state.results.length === 0) {
-    elements.emptyPanel.hidden = false;
-    if (payload.warnings?.length) {
-      elements.emptyPanel.insertAdjacentHTML("beforeend", `<div class="warning-list">${payload.warnings.map((warning) => `<div class="warning-item">${escapeHtml(warning)}</div>`).join("")}</div>`);
-    }
-    return;
-  }
-
-  elements.resultsPanel.hidden = false;
-  elements.resultsSummary.textContent = `${state.results.length.toLocaleString()} active location-level records are ready. Previewing the first ${Math.min(10, state.results.length)}.`;
-  const sources = payload.sources?.length ? payload.sources.join(" · ") : "No source details returned";
-  elements.sourceSummary.innerHTML = `<strong>Sources contributing records:</strong>${escapeHtml(sources)}`;
-  renderWarnings(payload.warnings || []);
-  renderTable(state.results);
-  elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function csvEscape(value) {
-  const text = String(value ?? "");
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
-function exportCsv() {
-  if (!state.results.length || !state.query) return;
-  const header = CSV_COLUMNS.map(([label]) => csvEscape(label)).join(",");
-  const body = state.results.map((row) => CSV_COLUMNS.map(([, key]) => csvEscape(row[key] || "")).join(",")).join("\r\n");
-  const csv = `\uFEFF${header}\r\n${body}`;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const industries = state.query.industries.slice(0, 2).map((id) => INDUSTRY_BY_ID[id]?.label || id)
-    .join("-").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "leads";
-  const states = state.query.states.join("-").toLowerCase();
-  const date = new Date().toISOString().slice(0, 10);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `mascon_leads_${industries}_${states}_${date}.csv`;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function handleSubmit(event) {
-  event.preventDefault();
-  const query = buildQuery();
-  if (!validateQuery(query)) return;
-
-  state.query = query;
-  state.results = [];
-  resetPanels();
-  setLoading(true);
-  startLoadingMessages();
-
-  try {
-    const response = await fetch("/.netlify/functions/search-leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(query),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `Search failed with status ${response.status}.`);
-    renderResults(payload);
-  } catch (error) {
-    elements.errorPanel.hidden = false;
-    elements.errorMessage.textContent = error instanceof Error ? error.message : "An unexpected error occurred.";
-    elements.errorPanel.scrollIntoView({ behavior: "smooth", block: "center" });
-  } finally {
-    setLoading(false);
-  }
-}
-
-function resetForm() {
-  elements.form.reset();
-  setStatePreset("new-england");
-  document.querySelector("#limit-300").checked = true;
-  elements.industryError.hidden = true;
-  elements.stateError.hidden = true;
-  resetPanels();
-  state.results = [];
-  state.query = null;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-try {
-  renderIndustryGroups();
-  renderOperations();
-  renderStates();
-  renderLimits();
-  setStatePreset("new-england");
-  const frontendWarning = document.querySelector("#frontend-warning");
-  if (frontendWarning) frontendWarning.hidden = true;
-} catch (error) {
-  const frontendWarning = document.querySelector("#frontend-warning");
-  if (frontendWarning) {
-    frontendWarning.hidden = false;
-    frontendWarning.textContent = `The interface could not initialize: ${error instanceof Error ? error.message : "unknown error"}`;
-  }
-  throw error;
-}
-
-elements.form.addEventListener("submit", handleSubmit);
-elements.exportButton.addEventListener("click", exportCsv);
-elements.resetButton.addEventListener("click", resetForm);
-elements.clearIndustries.addEventListener("click", () => {
-  document.querySelectorAll('input[name="industries"]').forEach((input) => { input.checked = false; });
-});
-elements.regionPresets.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-preset]");
-  if (button) setStatePreset(button.dataset.preset);
-});
-elements.stateOptions.addEventListener("change", updatePresetButtons);
+try{renderIndustries();renderOperations();renderStates();renderLimits();setPreset("new-england");$("#frontend-warning").hidden=true;}catch(e){$("#frontend-warning").textContent=`The interface could not initialize: ${e.message}`;throw e;}
+elements.form.addEventListener("submit",handleSubmit);elements.exportButton.addEventListener("click",exportCsv);elements.resetButton.addEventListener("click",resetForm);elements.clearIndustries.addEventListener("click",()=>document.querySelectorAll('input[name="industries"]').forEach(x=>x.checked=false));elements.regionPresets.addEventListener("click",e=>{const b=e.target.closest("[data-preset]");if(b)setPreset(b.dataset.preset);});elements.stateOptions.addEventListener("change",updatePresetButtons);

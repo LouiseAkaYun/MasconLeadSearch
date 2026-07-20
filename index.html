@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Mascon Lead Finder - internal government-data lead research tool." />
+  <meta name="description" content="Mascon Lead Finder - browser-based government-data lead research and CSV export." />
   <title>Mascon Lead Finder</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./styles.css" />
@@ -12,33 +12,36 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="brand-lockup">
-        <img class="brand-logo" src="./mascon-logo.png" alt="Mascon Strategic Supply Chain Services" onerror="this.hidden=true; this.nextElementSibling.hidden=false;" />
-        <div class="brand-fallback" hidden aria-label="Mascon Strategic Supply Chain Services">
-          <strong>MASCON</strong>
-          <span>Strategic Supply Chain Services</span>
-        </div>
+        <img class="brand-logo" src="./mascon-logo.png" alt="Mascon Strategic Supply Chain Services" />
       </div>
       <div class="header-copy">
         <p class="eyebrow">Internal Research Tool</p>
         <h1>Mascon Lead Finder</h1>
-        <p>Search selected government data sources, preview active businesses, and export a clean CSV.</p>
+        <p>Search compatible public government datasets, preview active businesses, and export a CSV.</p>
+        <p class="static-note">GitHub Pages edition · No server, login, database, or API-key entry required.</p>
       </div>
     </div>
   </header>
 
   <main class="page-shell">
     <div id="frontend-warning" class="frontend-warning">
-      The page controls are still loading. If this message remains, confirm that <code>app.js</code> was uploaded to the site root and redeploy.
+      The controls are loading. If this message remains, confirm that <code>app.js</code> is stored beside <code>index.html</code>.
     </div>
+
     <section class="intro-card" aria-labelledby="intro-title">
       <div>
-        <p class="eyebrow">Version 1.0</p>
+        <p class="eyebrow">Static Edition 1.0</p>
         <h2 id="intro-title">Build a Northeast lead list in one search</h2>
-        <p>The tool automatically chooses relevant public data sources. Coverage varies by industry and state, so partial-coverage warnings may appear.</p>
+        <p>The app automatically combines browser-compatible public sources. Coverage is strongest for Connecticut, New York, Pennsylvania, healthcare organizations, and EPA-regulated industrial facilities.</p>
+        <div class="coverage-grid">
+          <div class="coverage-chip"><strong>Business registries</strong>CT, NY and PA active/current records</div>
+          <div class="coverage-chip"><strong>Healthcare</strong>CMS NPPES organizational provider records</div>
+          <div class="coverage-chip"><strong>Industrial & blade prospects</strong>EPA ECHO active regulated facilities</div>
+        </div>
       </div>
       <div class="privacy-note">
         <strong>Data policy</strong>
-        <span>Only government-provided fields are exported. No website crawling or email guessing.</span>
+        <span>Only fields provided by government sources are exported. No website crawling, email guessing, or contact enrichment.</span>
       </div>
     </section>
 
@@ -49,7 +52,7 @@
             <span class="step-number">1</span>
             <div>
               <h2 id="industries-title">Industries</h2>
-              <p>Select one or more industries. At least one is required.</p>
+              <p>Select one or more industries. The first group contains potential blade-customer industries.</p>
             </div>
           </div>
           <button class="text-button" type="button" id="clear-industries">Clear all</button>
@@ -97,12 +100,12 @@
           </div>
         </div>
         <label class="field-label" for="include-keywords">Include keywords</label>
-        <input id="include-keywords" name="includeKeywords" type="text" placeholder="barcode, packaging, laboratory" autocomplete="off" />
-        <p class="field-help">A record may match any included term.</p>
+        <input id="include-keywords" name="includeKeywords" type="text" placeholder="meat, poultry, packaging" autocomplete="off" />
+        <p class="field-help">A record may match any included term. Leave blank to use only the selected industry presets.</p>
 
         <label class="field-label spaced" for="exclude-keywords">Exclude keywords</label>
         <input id="exclude-keywords" name="excludeKeywords" type="text" placeholder="residential, consulting" autocomplete="off" />
-        <p class="field-help">A record is removed if it contains any excluded term.</p>
+        <p class="field-help">A record is removed when any excluded term appears.</p>
       </section>
 
       <section class="panel" aria-labelledby="limit-title">
@@ -117,10 +120,7 @@
         </div>
         <div id="limit-options" class="limit-options" role="radiogroup" aria-label="Result limit"></div>
         <div class="search-actions">
-          <button id="search-button" class="primary-button" type="submit">
-            <span>Search leads</span>
-            <span aria-hidden="true">→</span>
-          </button>
+          <button id="search-button" class="primary-button" type="submit"><span>Search leads</span><span aria-hidden="true">→</span></button>
           <button id="reset-button" class="secondary-button" type="button">Reset</button>
         </div>
       </section>
@@ -131,6 +131,7 @@
       <div>
         <h2>Preparing your lead list</h2>
         <p id="loading-message">Preparing search criteria…</p>
+        <div id="source-status" class="source-status"></div>
       </div>
     </section>
 
@@ -143,16 +144,9 @@
         </div>
         <button id="export-button" class="primary-button" type="button">Export full CSV</button>
       </div>
-
       <div id="source-summary" class="source-summary"></div>
       <div id="warning-list" class="warning-list" hidden></div>
-
-      <div class="table-shell">
-        <table id="preview-table">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <div class="table-shell"><table id="preview-table"><thead></thead><tbody></tbody></table></div>
       <p class="table-note">Preview shows the first 10 rows. The CSV includes all returned rows up to the selected limit.</p>
     </section>
 
@@ -167,11 +161,7 @@
     </section>
   </main>
 
-  <footer class="site-footer">
-    <span>Internal Lead Research Tool</span>
-    <span>Mascon Inc.</span>
-  </footer>
-
+  <footer class="site-footer"><span>Internal Lead Research Tool</span><span>Mascon Inc.</span></footer>
   <script src="./app.js" defer></script>
 </body>
 </html>
