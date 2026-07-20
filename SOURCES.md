@@ -1,8 +1,25 @@
-# Public data source references
+# Official data references
 
-- Connecticut Business Registry — Business Master: https://data.ct.gov/d/n7gp-d28j
-- New York Active Corporations: https://data.ny.gov/d/n9v6-gdp6
-- Pennsylvania distinct registered businesses: https://data.pa.gov/d/3urc-uaba
-- CMS NPPES NPI Registry API: https://npiregistry.cms.hhs.gov/api-page
-- EPA ECHO web services: https://echo.epa.gov/tools/web-services
-- Socrata CORS/JSONP documentation: https://dev.socrata.com/docs/cors-and-jsonp.html
+## EPA ECHO
+
+- Facility search: https://echo.epa.gov/facilities/facility-search
+- Search criteria help: https://echo.epa.gov/help/facility-search/search-criteria-help
+- Search results field guide: https://echo.epa.gov/help/facility-search/all-data-search-results-help
+- REST service documentation: https://echo.epa.gov/system/files/ECHO%20All%20Data%20Search%20Services_v3.pdf
+
+The app uses the public JSONP service at:
+
+`https://echodata.epa.gov/echo/echo_rest_services.get_facilities`
+
+Core parameters include `p_st`, `p_ncs`, `p_act=Y`, `tablelist=Y`, and `qcolumns` including `FacNaicsCodes`.
+
+## Connecticut Business Registry
+
+- Dataset page: https://data.ct.gov/Business/Connecticut-Business-Registry-Business-Master/n7gp-d28j
+- API documentation: https://dev.socrata.com/foundry/data.ct.gov/n7gp-d28j
+- JSON endpoint: https://data.ct.gov/resource/n7gp-d28j.json
+
+## NAICS
+
+- Census NAICS portal: https://www.census.gov/naics/
+- 2022 NAICS manual: https://www.census.gov/naics/reference_files_tools/2022_NAICS_Manual.pdf

@@ -3,172 +3,180 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Mascon Lead Finder - browser-based government-data lead research and CSV export." />
+  <meta name="description" content="Mascon Lead Finder — New England NAICS-based government data search" />
   <title>Mascon Lead Finder</title>
-  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <div class="brand-lockup">
-        <img class="brand-logo" src="./mascon-logo.png" alt="Mascon Strategic Supply Chain Services" />
-      </div>
+      <img class="brand-logo" src="./mascon-logo.png" alt="Mascon Inc." />
       <div class="header-copy">
-        <p class="eyebrow">Internal Research Tool</p>
+        <p class="eyebrow">INTERNAL LEAD RESEARCH TOOL</p>
         <h1>Mascon Lead Finder</h1>
-        <p>Search compatible public government datasets, preview active businesses, and export a CSV.</p>
-        <p class="static-note">GitHub Pages edition · No server, login, database, or API-key entry required.</p>
+        <p>Search active New England business locations using NAICS-based public government data.</p>
       </div>
+      <span class="version-badge">NAICS Edition</span>
     </div>
   </header>
 
   <main class="page-shell">
-    <div id="frontend-warning" class="frontend-warning">
-      The controls are loading. If this message remains, confirm that <code>app.js</code> is stored beside <code>index.html</code>.
-    </div>
-
-    <section class="intro-card" aria-labelledby="intro-title">
-      <div>
-        <p class="eyebrow">Static Edition 1.1</p>
-        <h2 id="intro-title">Build a Northeast lead list in one search</h2>
-        <p>The app automatically combines browser-compatible public sources. Coverage is strongest for Connecticut, New York, Pennsylvania, healthcare organizations, and EPA-regulated industrial facilities.</p>
-        <div class="coverage-grid">
-          <div class="coverage-chip"><strong>Business registries</strong>CT, NY and PA active/current records</div>
-          <div class="coverage-chip"><strong>Healthcare</strong>CMS NPPES organizational provider records</div>
-          <div class="coverage-chip"><strong>Industrial & blade prospects</strong>EPA ECHO active regulated facilities</div>
-        </div>
-      </div>
-      <div class="privacy-note">
-        <strong>Data policy</strong>
-        <span>Only fields provided by government sources are exported. No website crawling, email guessing, or contact enrichment.</span>
-      </div>
+    <section class="coverage-banner" aria-label="Data coverage notice">
+      <strong>Current coverage:</strong> EPA ECHO active regulated facilities across all six New England states, plus the Connecticut Business Registry for broader Connecticut coverage. Results are based on available public records and are not a complete directory of every business.
     </section>
 
-    <form id="lead-search-form" class="search-grid" novalidate>
-      <section class="panel panel-wide" aria-labelledby="industries-title">
-        <div class="panel-heading">
-          <div>
-            <span class="step-number">1</span>
-            <div>
-              <h2 id="industries-title">Industries</h2>
-              <p>Select one or more industries. The first group contains potential blade-customer industries.</p>
-            </div>
-          </div>
-          <button class="text-button" type="button" id="clear-industries">Clear all</button>
+    <form id="search-form" class="search-card" novalidate>
+      <div class="section-heading">
+        <div>
+          <span class="step-number">1</span>
+          <h2>Select industries</h2>
         </div>
-        <div id="industry-groups" class="industry-groups"></div>
-        <p id="industry-error" class="field-error" hidden>Please select at least one industry.</p>
-      </section>
+        <p>Search the dropdown by industry name or NAICS code. Select up to five presets; custom NAICS codes can also be added.</p>
+      </div>
 
-      <section class="panel panel-wide" aria-labelledby="operations-title">
-        <div class="panel-heading">
-          <div>
-            <span class="step-number">2</span>
-            <div>
-              <h2 id="operations-title">Business operations</h2>
-              <p>Optional. Leave all unchecked to include all operations.</p>
-            </div>
-          </div>
+      <div class="industry-picker" id="industry-picker">
+        <label class="field-label" for="industry-search">Industry presets <span class="required">Required</span></label>
+        <div class="combobox-wrap">
+          <input id="industry-search" class="text-input" type="search" autocomplete="off" placeholder="Search industries or NAICS codes…" aria-expanded="false" aria-controls="industry-dropdown" />
+          <button id="industry-toggle" class="input-icon-button" type="button" aria-label="Open industry list">⌄</button>
+          <div id="industry-dropdown" class="industry-dropdown" role="listbox" hidden></div>
         </div>
-        <div id="operation-options" class="checkbox-grid operation-grid"></div>
-      </section>
+        <div id="selected-industries" class="tag-list" aria-live="polite"></div>
+        <p id="industry-error" class="field-error" hidden>Select at least one industry preset or add a custom NAICS code.</p>
+      </div>
 
-      <section class="panel panel-wide" aria-labelledby="geography-title">
-        <div class="panel-heading">
-          <div>
-            <span class="step-number">3</span>
-            <div>
-              <h2 id="geography-title">Geography</h2>
-              <p>Use a preset, then adjust individual states as needed.</p>
-            </div>
-          </div>
+      <div class="custom-naics-block">
+        <label class="field-label" for="custom-naics">Custom NAICS codes <span class="optional">Optional</span></label>
+        <div class="inline-field">
+          <input id="custom-naics" class="text-input" type="text" placeholder="Examples: 326199, 423840, 31-33" />
+          <button id="add-naics" class="secondary-button" type="button">Add code</button>
         </div>
-        <div id="region-presets" class="preset-row"></div>
-        <div id="state-options" class="checkbox-grid state-grid"></div>
-        <p id="state-error" class="field-error" hidden>Please select at least one state.</p>
-      </section>
+        <p class="field-help">Enter 2–6 digit codes or a two-digit range. Separate multiple entries with commas or spaces.</p>
+        <div id="selected-custom-naics" class="tag-list" aria-live="polite"></div>
+        <p id="naics-error" class="field-error" hidden></p>
+      </div>
 
-      <section class="panel" aria-labelledby="keywords-title">
-        <div class="panel-heading compact">
-          <div>
-            <span class="step-number">4</span>
-            <div>
-              <h2 id="keywords-title">Keywords</h2>
-              <p>Optional, comma-separated terms.</p>
-            </div>
-          </div>
-        </div>
-        <label class="field-label" for="include-keywords">Include keywords</label>
-        <input id="include-keywords" name="includeKeywords" type="text" placeholder="meat, poultry, packaging" autocomplete="off" />
-        <p class="field-help">A record may match any included term. Leave blank to use only the selected industry presets.</p>
+      <hr />
 
-        <label class="field-label spaced" for="exclude-keywords">Exclude keywords</label>
-        <input id="exclude-keywords" name="excludeKeywords" type="text" placeholder="residential, consulting" autocomplete="off" />
-        <p class="field-help">A record is removed when any excluded term appears.</p>
-      </section>
+      <div class="section-heading">
+        <div>
+          <span class="step-number">2</span>
+          <h2>Business operations</h2>
+        </div>
+        <p>Optional. Leaving every box unchecked means all operations.</p>
+      </div>
+      <div id="operation-options" class="checkbox-grid operation-grid"></div>
 
-      <section class="panel" aria-labelledby="limit-title">
-        <div class="panel-heading compact">
-          <div>
-            <span class="step-number">5</span>
-            <div>
-              <h2 id="limit-title">Result limit</h2>
-              <p>Choose the size of the exported list.</p>
-            </div>
-          </div>
+      <hr />
+
+      <div class="section-heading">
+        <div>
+          <span class="step-number">3</span>
+          <h2>Geography</h2>
         </div>
-        <div id="limit-options" class="limit-options" role="radiogroup" aria-label="Result limit"></div>
-        <div class="search-actions">
-          <button id="search-button" class="primary-button" type="submit"><span>Search leads</span><span aria-hidden="true">→</span></button>
-          <button id="reset-button" class="secondary-button" type="button">Reset</button>
+        <p>Select individual states or use the New England preset.</p>
+      </div>
+      <div class="preset-row" id="region-presets"></div>
+      <div id="state-options" class="checkbox-grid state-grid"></div>
+      <p id="state-error" class="field-error" hidden>Select at least one state.</p>
+
+      <hr />
+
+      <div class="section-heading">
+        <div>
+          <span class="step-number">4</span>
+          <h2>Optional keyword filters</h2>
         </div>
-      </section>
+        <p>Keywords are applied after the NAICS search. They do not determine the industry classification.</p>
+      </div>
+      <div class="two-column-fields">
+        <div>
+          <label class="field-label" for="include-keywords">Include keywords</label>
+          <input id="include-keywords" class="text-input" type="text" placeholder="Example: poultry, packaging" />
+          <p class="field-help">Keep a record when any included keyword appears.</p>
+        </div>
+        <div>
+          <label class="field-label" for="exclude-keywords">Exclude keywords</label>
+          <input id="exclude-keywords" class="text-input" type="text" placeholder="Example: residential, government" />
+          <p class="field-help">Remove a record when any excluded keyword appears.</p>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="section-heading compact-heading">
+        <div>
+          <span class="step-number">5</span>
+          <h2>Result limit</h2>
+        </div>
+      </div>
+      <div id="limit-options" class="limit-options"></div>
+
+      <div class="form-actions">
+        <button id="search-button" class="primary-button" type="submit">
+          <span class="button-label">Search Leads</span>
+        </button>
+        <button id="reset-button" class="text-button" type="button">Reset form</button>
+      </div>
     </form>
 
-    <section id="loading-panel" class="status-panel" hidden aria-live="polite">
-      <div class="loader" aria-hidden="true"></div>
-      <div>
-        <h2>Preparing your lead list</h2>
-        <p id="loading-message">Preparing search criteria…</p>
-        <div id="source-status" class="source-status"></div>
-      </div>
-    </section>
-
-    <section id="diagnostics-panel" class="diagnostics-panel" hidden aria-labelledby="diagnostics-title">
-      <h2 id="diagnostics-title">Source check</h2>
-      <p>Raw rows returned before industry, operation, keyword, and duplicate filtering.</p>
-      <div id="diagnostics-list" class="diagnostics-list"></div>
-    </section>
-
-    <section id="results-panel" class="results-panel" hidden aria-labelledby="results-title">
-      <div class="results-header">
+    <section id="progress-panel" class="panel" hidden>
+      <div class="progress-header">
+        <div class="spinner" aria-hidden="true"></div>
         <div>
-          <p class="eyebrow">Search complete</p>
-          <h2 id="results-title">Lead list preview</h2>
-          <p id="results-summary"></p>
+          <h2>Searching public data</h2>
+          <p id="progress-message">Preparing search criteria…</p>
         </div>
-        <button id="export-button" class="primary-button" type="button">Export full CSV</button>
       </div>
-      <div id="source-summary" class="source-summary"></div>
-      <div id="warning-list" class="warning-list" hidden></div>
-      <div class="table-shell"><table id="preview-table"><thead></thead><tbody></tbody></table></div>
-      <p class="table-note">Preview shows the first 10 rows. The CSV includes all returned rows up to the selected limit.</p>
+      <div id="source-status" class="source-status"></div>
     </section>
 
-    <section id="empty-panel" class="empty-panel" hidden>
-      <h2>No matching active records found</h2>
-      <p>Review the source check above. Then try leaving Include Keywords blank, selecting a state with a compatible source, or broadening the industry selection.</p>
-      <div id="empty-warning-list" class="warning-list" hidden></div>
-    </section>
-
-    <section id="error-panel" class="error-panel" hidden role="alert">
+    <section id="error-panel" class="panel error-panel" hidden>
       <h2>Search could not be completed</h2>
       <p id="error-message"></p>
     </section>
+
+    <section id="empty-panel" class="panel empty-panel" hidden>
+      <h2>No matching active locations were found</h2>
+      <p>Review the source diagnostics below. Try a broader NAICS category, remove operation or keyword filters, or select additional New England states.</p>
+      <div id="empty-warning-list" class="warning-list"></div>
+    </section>
+
+    <section id="diagnostics-panel" class="panel" hidden>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow dark">SOURCE DIAGNOSTICS</p>
+          <h2>How the records were processed</h2>
+        </div>
+      </div>
+      <div class="table-scroll diagnostics-scroll">
+        <table class="diagnostics-table">
+          <thead>
+            <tr><th>Source / State</th><th>Returned</th><th>NAICS matched</th><th>Active</th><th>Operation</th><th>Keywords</th><th>Final</th><th>Status</th></tr>
+          </thead>
+          <tbody id="diagnostics-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="results-panel" class="panel results-panel" hidden>
+      <div class="results-topline">
+        <div>
+          <p class="eyebrow dark">SEARCH RESULTS</p>
+          <h2 id="results-summary"></h2>
+          <p id="source-summary" class="muted"></p>
+        </div>
+        <button id="export-button" class="primary-button" type="button">Export Full CSV</button>
+      </div>
+      <div id="warning-list" class="warning-list" hidden></div>
+      <p class="preview-note">Previewing the first 10 rows. The CSV contains all selected results up to the chosen limit.</p>
+      <div class="table-scroll">
+        <table id="preview-table" class="results-table"></table>
+      </div>
+    </section>
   </main>
 
-  <footer class="site-footer"><span>Internal Lead Research Tool</span><span>Mascon Inc.</span></footer>
+  <footer>Internal Lead Research Tool | Mascon Inc.</footer>
   <script src="./app.js" defer></script>
 </body>
 </html>

@@ -1,55 +1,51 @@
-# Mascon Lead Finder — GitHub Pages Edition v1.1
+# Mascon Lead Finder — New England NAICS Edition
 
-A static, English-only lead research tool for Mascon Inc. It runs entirely in the browser and exports CSV files. No backend, Python environment, Netlify Functions, database, login, or API-key entry is required.
+A static GitHub Pages application for occasional internal B2B lead research. It searches public government data directly from the browser and exports a CSV.
 
-## Publish with GitHub Pages
+## What changed in this edition
 
-1. Create a GitHub repository.
-2. Upload **the contents of this folder** to the repository root. `index.html`, `app.js`, and `styles.css` must be visible at the top level.
-3. Open **Settings → Pages**.
-4. Under **Build and deployment**, choose **Deploy from a branch**.
-5. Select the `main` branch and `/(root)`, then click **Save**.
-6. GitHub will show the public URL after deployment finishes.
-
-The repository may be public or private if your GitHub plan permits Pages for that repository type. The deployed site itself is static and contains no secret credentials.
+- New England only: MA, CT, RI, NH, VT, and ME
+- NAICS is the master industry standard
+- Searchable multi-select industry dropdown
+- NAICS codes appear only after an industry is selected
+- Custom 2–6 digit NAICS codes and short two-digit ranges
+- No New York, New Jersey, or Pennsylvania name-based searches
+- No backend, database, API keys, Python, or Netlify Functions
+- Detailed source diagnostics show where records are removed
 
 ## Data sources
 
-The static edition uses browser-compatible public sources and continues when one source fails:
+1. **EPA ECHO Active Facilities** — all selected New England states. ECHO is strongest for active regulated physical facilities and industrial operations.
+2. **Connecticut Business Registry — Business Master** — additional broad Connecticut coverage using active status and self-reported NAICS.
 
-- Connecticut Business Registry — Business Master
-- New York Active Corporations
-- Pennsylvania current/distinct registered businesses
-- CMS NPPES NPI Registry for healthcare organizations
-- EPA ECHO active regulated facilities via JSONP for industrial searches
+Because a comparable browser-accessible statewide active-business registry with direct NAICS fields is not currently connected for MA, RI, NH, VT, or ME, those states rely on ECHO in this edition. The app displays this limitation clearly.
 
-Coverage differs by state and industry. The page displays partial-coverage warnings. Email, website, and contact-person fields remain blank unless directly provided by a government source.
+## GitHub Pages deployment
 
-## Blade-customer presets
+1. Create or open a **public** GitHub repository.
+2. Upload the files in this folder to the repository root.
+3. Open **Settings → Pages**.
+4. Under **Build and deployment**, choose **Deploy from a branch**.
+5. Select `main` and `/(root)`.
+6. Save and wait for the GitHub Pages URL.
 
-The first industry group includes potential blade customers such as meat and poultry processors, seafood plants, packaging converters, plastic and rubber converters, textile/apparel cutters, leather and footwear processors, wood-product companies, metal fabricators, recycling operations, industrial machinery manufacturers, automotive/tire/gasket manufacturers, and medical/surgical device manufacturers.
+No API key setup is required.
 
-## Files
+## Search logic
 
-- `index.html` — one-page interface
-- `styles.css` — Mascon-branded styling
-- `app.js` — presets, government-source connectors, filtering, deduplication, preview and CSV export
-- `mascon-logo.png` — transparent Mascon logo
-- `.nojekyll` — prevents Jekyll processing
+1. Selected industry presets and custom entries become NAICS prefixes.
+2. EPA ECHO and the Connecticut Registry are queried using NAICS criteria.
+3. Returned NAICS values are parsed and checked again in the browser.
+4. Only active records are retained.
+5. Optional operation and keyword filters are applied.
+6. Duplicate physical locations are merged.
+7. Results are balanced across selected industries, with state priority MA → NH/CT → RI → VT → ME.
+8. The first 10 rows are previewed and all selected records are exported as CSV.
 
-## Notes
+## Important limitations
 
-- Only explicitly active/current records are retained.
-- Different physical locations remain separate rows.
-- Results are balanced across selected industries.
-- State priority is Massachusetts, then New Hampshire/Connecticut, then New York, followed by Rhode Island, New Jersey, Vermont, Maine and Pennsylvania.
-- The first 10 rows are previewed; the full selected limit is exported.
-
-
-## Version 1.1 fixes
-
-- Corrected Connecticut NAICS matching for values formatted as descriptions plus codes.
-- Removed invalid Connecticut select fields that caused the API query to fail.
-- Corrected Pennsylvania column mappings.
-- Corrected EPA ECHO active-facility handling.
-- Added a visible source diagnostic section so zero-result searches show whether each source returned raw records or failed.
+- Public government data is not a complete commercial lead database.
+- ECHO includes facilities represented in EPA regulatory programs, not every company.
+- Connecticut NAICS values are self-reported.
+- Email, website, phone, and contact person are included only if supplied by the government source; otherwise they remain blank.
+- Browser-side public APIs can experience outages, throttling, or schema changes. The diagnostics table is designed to make these failures visible.
