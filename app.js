@@ -131,7 +131,7 @@ const elements = {
   resultsSummary:$("#results-summary"), sourceSummary:$("#source-summary"), warningList:$("#warning-list"),
   exportButton:$("#export-button"), previewTable:$("#preview-table"), emptyPanel:$("#empty-panel"),
   errorPanel:$("#error-panel"), errorMessage:$("#error-message"), includeKeywords:$("#include-keywords"),
-  excludeKeywords:$("#exclude-keywords"),
+  excludeKeywords:$("#exclude-keywords"), emptyWarningList:$("#empty-warning-list"), diagnosticsPanel:$("#diagnostics-panel"), diagnosticsList:$("#diagnostics-list"),
 };
 const appState = {results:[],query:null};
 
@@ -155,22 +155,108 @@ function jsonp(url, timeout=30000){return new Promise((resolve,reject)=>{const c
 
 function setSourceStatus(name,status,text=""){let el=document.querySelector(`[data-source-status="${name}"]`);if(!el){el=document.createElement("span");el.dataset.sourceStatus=name;elements.sourceStatus.append(el);}el.className=`source-pill ${status}`;el.textContent=text||name;}
 
-async function searchConnecticut(q){const source="Connecticut Business Registry";if(!q.states.includes("CT"))return {source,records:[],warnings:[],skipped:true};const prefixes=compressPrefixes(q.industries.flatMap(id=>INDUSTRY_BY_ID[id]?.naics||[]));if(!prefixes.length)return {source,records:[],warnings:["Connecticut registry skipped because no NAICS mapping was available."]};const where=`status='Active' AND upper(billingstate)='CT' AND (${prefixes.map(p=>`naics_code like '${soqlEscape(p)}%'`).join(" OR ")})`;const params=new URLSearchParams({"$select":"id,name,business_type,status,sub_status,accountnumber,billingstreet,billing_unit,billingcity,billingstate,billingpostalcode,business_email_address,date_registration,naics_code,naics_sub_code","$where":where,"$limit":String(Math.min(1000,Math.max(300,q.limit*4))),"$order":"date_registration DESC"});const rows=await fetchJson(`https://data.ct.gov/resource/n7gp-d28j.json?${params}`);const records=rows.map(row=>{const ids=matchIndustryIdsFromNaics(row.naics_code,q.industries);return {companyName:clean(row.name),industryIds:ids,naicsCode:clean(row.naics_code),businessType:clean(row.naics_sub_code||row.business_type),address:joinAddress(row.billingstreet,row.billing_unit),city:clean(row.billingcity),state:"CT",zip:clean(row.billingpostalcode),phone:"",email:clean(row.business_email_address),contactPerson:"",website:"",companyStatus:clean(row.status)==="Active"?"Active":"",registrationDate:clean(row.date_registration).slice(0,10),dataSources:[source],sourceRecordIds:[clean(row.accountnumber||row.id)]};}).filter(r=>r.companyName&&r.companyStatus==="Active"&&r.industryIds.length);return {source,records,warnings:["Connecticut industry matching uses self-reported NAICS codes; businesses without NAICS data are not returned."]};}
+async function searchConnecticut(q){
+  const source="Connecticut Business Registry";
+  if(!q.states.includes("CT"))return {source,records:[],warnings:[],skipped:true};
+  const prefixes=compressPrefixes(q.industries.flatMap(id=>INDUSTRY_BY_ID[id]?.naics||[]));
+  if(!prefixes.length)return {source,records:[],warnings:["Connecticut registry skipped because no NAICS mapping was available."]};
+
+  // CT stores many NAICS values as labels such as "Residential Remodelers (236118)", not as a code-only value.
+  // A contains match is therefore required; prefix-only matching incorrectly returned zero rows.
+  const naicsClause=prefixes.map(p=>`naics_code like '%${soqlEscape(p)}%'`).join(" OR ");
+  const where=`upper(status)='ACTIVE' AND upper(billingstate)='CT' AND (${naicsClause})`;
+  const params=new URLSearchParams({
+    "$select":"id,name,business_type,status,accountnumber,billingstreet,billingcity,billingstate,billingpostalcode,business_email_address,date_registration,naics_code",
+    "$where":where,
+    "$limit":String(Math.min(1500,Math.max(400,q.limit*5))),
+    "$order":"date_registration DESC"
+  });
+  const rows=await fetchJson(`https://data.ct.gov/resource/n7gp-d28j.json?${params}`);
+  const records=rows.map(row=>{
+    const ids=matchIndustryIdsFromNaics(row.naics_code,q.industries);
+    const status=clean(row.status).toUpperCase();
+    return {
+      companyName:clean(row.name),industryIds:ids,naicsCode:clean(row.naics_code),
+      businessType:clean(row.naics_code||row.business_type),address:clean(row.billingstreet),
+      city:clean(row.billingcity),state:"CT",zip:clean(row.billingpostalcode),phone:"",
+      email:clean(row.business_email_address),contactPerson:"",website:"",
+      companyStatus:status==="ACTIVE"?"Active":"",registrationDate:clean(row.date_registration).slice(0,10),
+      dataSources:[source],sourceRecordIds:[clean(row.accountnumber||row.id)]
+    };
+  }).filter(r=>r.companyName&&r.companyStatus==="Active"&&r.industryIds.length);
+  return {source,records,warnings:["Connecticut matching uses self-reported NAICS values. Businesses without a NAICS value are not returned."]};
+}
 
 function nyAddress(row){if(clean(row.location_state).toUpperCase()==="NY")return {address:joinAddress(row.location_address_1,row.location_address_2),city:clean(row.location_city),state:"NY",zip:clean(row.location_zip)};return {address:joinAddress(row.dos_process_address_1,row.dos_process_address_2),city:clean(row.dos_process_city),state:clean(row.dos_process_state).toUpperCase(),zip:clean(row.dos_process_zip)};}
-async function searchNewYork(q){const source="New York Active Corporations";if(!q.states.includes("NY"))return {source,records:[],warnings:[],skipped:true};const jobs=q.industries.slice(0,18).map(id=>({id,terms:unique(INDUSTRY_BY_ID[id]?.searchTerms||[]).slice(0,5)})).filter(x=>x.terms.length);const per=Math.min(220,Math.max(40,Math.ceil(q.limit/Math.max(jobs.length,1))*3));const batches=[];for(const job of jobs){const clause=job.terms.map(t=>`upper(current_entity_name) like '%${soqlEscape(t.toUpperCase())}%'`).join(" OR ");const params=new URLSearchParams({"$select":"dos_id,current_entity_name,initial_dos_filing_date,entity_type,dos_process_address_1,dos_process_address_2,dos_process_city,dos_process_state,dos_process_zip,chairman_name,location_address_1,location_address_2,location_city,location_state,location_zip","$where":`(${clause}) AND (upper(location_state)='NY' OR upper(dos_process_state)='NY')`,"$limit":String(per),"$order":"initial_dos_filing_date DESC"});try{const rows=await fetchJson(`https://data.ny.gov/resource/n9v6-gdp6.json?${params}`);batches.push(...rows.map(row=>{const a=nyAddress(row);return {companyName:clean(row.current_entity_name),industryIds:[job.id],naicsCode:"",businessType:clean(row.entity_type),address:a.address,city:a.city,state:a.state,zip:a.zip,phone:"",email:"",contactPerson:clean(row.chairman_name),website:"",companyStatus:"Active",registrationDate:clean(row.initial_dos_filing_date).slice(0,10),dataSources:[source],sourceRecordIds:[clean(row.dos_id)]};}).filter(r=>r.companyName&&r.state==="NY"));}catch(e){/* continue other industries */}}
+async function searchNewYork(q){const source="New York Active Corporations";if(!q.states.includes("NY"))return {source,records:[],warnings:[],skipped:true};const jobs=q.industries.slice(0,18).map(id=>({id,terms:unique([...(INDUSTRY_BY_ID[id]?.searchTerms||[]),...q.includeKeywords]).slice(0,6)})).filter(x=>x.terms.length);const per=Math.min(220,Math.max(40,Math.ceil(q.limit/Math.max(jobs.length,1))*3));const batches=[];for(const job of jobs){const clause=job.terms.map(t=>`upper(current_entity_name) like '%${soqlEscape(t.toUpperCase())}%'`).join(" OR ");const params=new URLSearchParams({"$select":"dos_id,current_entity_name,initial_dos_filing_date,entity_type,dos_process_address_1,dos_process_address_2,dos_process_city,dos_process_state,dos_process_zip,chairman_name,location_address_1,location_address_2,location_city,location_state,location_zip","$where":`(${clause}) AND (upper(location_state)='NY' OR upper(dos_process_state)='NY')`,"$limit":String(per),"$order":"initial_dos_filing_date DESC"});try{const rows=await fetchJson(`https://data.ny.gov/resource/n9v6-gdp6.json?${params}`);batches.push(...rows.map(row=>{const a=nyAddress(row);return {companyName:clean(row.current_entity_name),industryIds:[job.id],naicsCode:"",businessType:clean(row.entity_type),address:a.address,city:a.city,state:a.state,zip:a.zip,phone:"",email:"",contactPerson:clean(row.chairman_name),website:"",companyStatus:"Active",registrationDate:clean(row.initial_dos_filing_date).slice(0,10),dataSources:[source],sourceRecordIds:[clean(row.dos_id)]};}).filter(r=>r.companyName&&r.state==="NY"));}catch(e){/* continue other industries */}}
 return {source,records:batches,warnings:["New York does not publish NAICS codes in this dataset; industry matching is based on words in the corporation name and may be incomplete."]};}
 
-async function searchPennsylvania(q){const source="Pennsylvania Current Registered Businesses";if(!q.states.includes("PA"))return {source,records:[],warnings:[],skipped:true};const jobs=q.industries.slice(0,16).map(id=>({id,terms:unique(INDUSTRY_BY_ID[id]?.searchTerms||[]).slice(0,3)})).filter(x=>x.terms.length);const per=Math.min(180,Math.max(35,Math.ceil(q.limit/Math.max(jobs.length,1))*3));const out=[];for(const job of jobs){for(const term of job.terms){const params=new URLSearchParams({"$q":term,"$limit":String(per)});try{const rows=await fetchJson(`https://data.pa.gov/resource/3urc-uaba.json?${params}`);for(const row of rows){const companyName=firstField(row,["business_name","businessname","name","entity_name","legal_name","business"]);if(!companyName)continue;const stateVal=firstField(row,["state","business_state","address_state","physical_state"]).toUpperCase()||"PA";if(stateVal!=="PA")continue;const address=firstField(row,["street_address","business_address","address","address_1","physical_address","street"]);const city=firstField(row,["city","business_city","municipality","physical_city"]);const zip=firstField(row,["zip","zip_code","postal_code","business_zip","physical_zip"]);const rid=firstField(row,["business_id","entity_number","id","account_id","registration_number"])||hashString(JSON.stringify(row));out.push({companyName,industryIds:[job.id],naicsCode:firstField(row,["naics","naics_code"]),businessType:firstField(row,["business_type","entity_type","license_type","department"]),address,city,state:"PA",zip,phone:firstField(row,["phone","telephone"]),email:firstField(row,["email","email_address"]),contactPerson:firstField(row,["contact_name","owner_name","officer_name"]),website:firstField(row,["website","url"]),companyStatus:"Active",registrationDate:firstField(row,["registration_date","formation_date","date_registered"]).slice(0,10),dataSources:[source],sourceRecordIds:[rid]});}}catch(e){/* continue */}}}
-return {source,records:out,warnings:["Pennsylvania's current-business view does not provide consistent industry fields; matching uses the portal's full-text search and may be broad."]};}
+async function searchPennsylvania(q){
+  const source="Pennsylvania Current Registered Businesses";
+  if(!q.states.includes("PA"))return {source,records:[],warnings:[],skipped:true};
+  const jobs=q.industries.slice(0,16).map(id=>({id,terms:unique([...(INDUSTRY_BY_ID[id]?.searchTerms||[]),...q.includeKeywords]).slice(0,4)})).filter(x=>x.terms.length);
+  const per=Math.min(200,Math.max(40,Math.ceil(q.limit/Math.max(jobs.length,1))*3));
+  const out=[];
+  for(const job of jobs){
+    for(const term of job.terms){
+      const params=new URLSearchParams({"$q":term,"$limit":String(per)});
+      try{
+        const rows=await fetchJson(`https://data.pa.gov/resource/3urc-uaba.json?${params}`);
+        for(const row of rows){
+          const companyName=clean(row.business_name);
+          if(!companyName||clean(row.state).toUpperCase()!=="PA")continue;
+          out.push({
+            companyName,industryIds:[job.id],naicsCode:"",businessType:clean(row.typeofbusinessregistration),
+            address:joinAddress(row.address_line1,row.address_line2),city:clean(row.city),state:"PA",zip:clean(row.zip),
+            phone:"",email:"",contactPerson:"",website:"",companyStatus:"Active",registrationDate:"",
+            dataSources:[source],sourceRecordIds:[clean(row.filing_number)||hashString(JSON.stringify(row))]
+          });
+        }
+      }catch(e){/* continue with the remaining terms */}
+    }
+  }
+  return {source,records:out,warnings:["Pennsylvania's current-business view has no NAICS field. Industry matching is based on business-name full-text search and may be incomplete."]};
+}
 
 function nppesAddress(result){const a=(result.addresses||[]).find(x=>x.address_purpose==="LOCATION")||(result.addresses||[])[0]||{};return a;}
 async function searchNppes(q){const source="CMS NPPES NPI Registry";const ids=q.industries.filter(id=>NPPES_IDS.has(id));if(!ids.length)return {source,records:[],warnings:[],skipped:true};const jobs=[];for(const id of ids)for(const st of q.states)for(const taxonomy of (INDUSTRY_BY_ID[id]?.nppesTerms||[]))jobs.push({id,st,taxonomy});const capped=jobs.slice(0,20);const per=Math.min(200,Math.max(25,Math.ceil(q.limit/Math.max(capped.length,1))*3));const out=[];for(const job of capped){const params=new URLSearchParams({version:"2.1",enumeration_type:"NPI-2",state:job.st,taxonomy_description:job.taxonomy,limit:String(per),skip:"0"});try{const data=await fetchJson(`https://npiregistry.cms.hhs.gov/api/?${params}`);for(const result of (data.results||[])){const b=result.basic||{},a=nppesAddress(result);const official=[b.authorized_official_first_name,b.authorized_official_last_name].map(clean).filter(Boolean).join(" ");const status=clean(b.status).toUpperCase()==="A"?"Active":"";if(!status)continue;out.push({companyName:clean(b.organization_name),industryIds:[job.id],naicsCode:"",businessType:(result.taxonomies||[]).map(x=>clean(x.desc)).filter(Boolean).join("; "),address:joinAddress(a.address_1,a.address_2),city:clean(a.city),state:clean(a.state).toUpperCase(),zip:clean(a.postal_code).slice(0,10),phone:clean(a.telephone_number),email:"",contactPerson:official?`${official}${b.authorized_official_title_or_position?` — ${clean(b.authorized_official_title_or_position)}`:""}`:"",website:"",companyStatus:"Active",registrationDate:clean(b.enumeration_date),dataSources:[source],sourceRecordIds:[clean(result.number)]});}}catch(e){throw new Error("NPPES browser request was blocked or unavailable");}}
 return {source,records:out.filter(r=>r.companyName&&q.states.includes(r.state)),warnings:jobs.length>capped.length?["NPPES source requests were capped to keep the browser search responsive."]:[]};}
 
 function echoFacilities(data){const r=data?.Results||data?.results||data;return r?.Facilities||r?.facilities||[];}
-async function searchEcho(q){const source="EPA ECHO Active Facilities";const ids=q.industries.filter(id=>ECHO_IDS.has(id));if(!ids.length)return {source,records:[],warnings:[],skipped:true};const two=compressPrefixes(ids.flatMap(id=>INDUSTRY_BY_ID[id]?.naics||[]).map(n=>n.slice(0,2))).filter(x=>x.length===2).slice(0,18);if(!two.length)return {source,records:[],warnings:[],skipped:true};const out=[];for(const st of q.states){const params=new URLSearchParams({output:"JSONP",p_st:st,p_ncs:two.join(","),p_act:"Y",tablelist:"Y",responseset:String(Math.min(1000,Math.max(300,q.limit*4))),qcolumns:"3,4,5,6,11,31,122,124"});try{const data=await jsonp(`https://echodata.epa.gov/echo/echo_rest_services.get_facilities?${params}`);for(const f of echoFacilities(data)){const naics=clean(f.FacNaicsCodes||f.facNaicsCodes||f.CWANaics||"");const industryIds=matchIndustryIdsFromNaics(naics,ids);const active=clean(f.FacActiveFlag||f.facActiveFlag).toUpperCase()==="Y";const federal=clean(f.FacFederalFlg||f.facFederalFlg).toUpperCase()==="Y";if(!active||federal||!industryIds.length)continue;out.push({companyName:clean(f.FacName||f.facName),industryIds,naicsCode:naics,businessType:"EPA-regulated operating facility",address:clean(f.FacStreet||f.facStreet),city:clean(f.FacCity||f.facCity),state:clean(f.FacState||f.facState).toUpperCase(),zip:clean(f.FacZip||f.facZip),phone:"",email:"",contactPerson:"",website:"",companyStatus:"Active",registrationDate:"",dataSources:[source],sourceRecordIds:[clean(f.RegistryID||f.registryID||f.SourceID)]});}}catch(e){throw new Error("EPA ECHO browser request was blocked or unavailable");}}
-return {source,records:out,warnings:["EPA ECHO covers active regulated facilities, not every private business in an industry."]};}
+async function searchEcho(q){
+  const source="EPA ECHO Active Facilities";
+  const ids=q.industries.filter(id=>ECHO_IDS.has(id));
+  if(!ids.length)return {source,records:[],warnings:[],skipped:true};
+  const two=compressPrefixes(ids.flatMap(id=>INDUSTRY_BY_ID[id]?.naics||[]).map(n=>n.slice(0,2))).filter(x=>x.length===2).slice(0,18);
+  if(!two.length)return {source,records:[],warnings:[],skipped:true};
+  const out=[];
+  for(const st of q.states){
+    const params=new URLSearchParams({
+      output:"JSONP",p_st:st,p_ncs:two.join(","),p_act:"Y",tablelist:"Y",
+      responseset:String(Math.min(1000,Math.max(300,q.limit*4))),qcolumns:"3,4,5,6,11,31,122,124"
+    });
+    try{
+      const data=await jsonp(`https://echodata.epa.gov/echo/echo_rest_services.get_facilities?${params}`);
+      for(const f of echoFacilities(data)){
+        const naics=clean(f.FacNaicsCodes||f.facNaicsCodes||f.CAANaics||f.CWANaics||f.RCRANaics||"");
+        const industryIds=matchIndustryIdsFromNaics(naics,ids);
+        const activeFlag=clean(f.FacActiveFlag||f.facActiveFlag).toUpperCase();
+        const federal=clean(f.FacFederalFlg||f.facFederalFlg).toUpperCase()==="Y";
+        // p_act=Y already limits the service to active/operating facilities. Some responses omit FacActiveFlag,
+        // so only reject a row when the API explicitly says N.
+        if(activeFlag==="N"||federal||!industryIds.length)continue;
+        out.push({
+          companyName:clean(f.FacName||f.facName),industryIds,naicsCode:naics,
+          businessType:"EPA-regulated operating facility",address:clean(f.FacStreet||f.facStreet),
+          city:clean(f.FacCity||f.facCity),state:clean(f.FacState||f.facState).toUpperCase(),zip:clean(f.FacZip||f.facZip),
+          phone:"",email:"",contactPerson:"",website:clean(f.DfrUrl||f.dfrUrl),companyStatus:"Active",registrationDate:"",
+          dataSources:[source],sourceRecordIds:[clean(f.RegistryID||f.registryID||f.SourceID)]
+        });
+      }
+    }catch(e){throw new Error("EPA ECHO browser request was blocked or unavailable");}
+  }
+  return {source,records:out,warnings:["EPA ECHO covers active regulated facilities, not every private business in an industry."]};
+}
 
 function textHaystack(r){return [r.companyName,r.businessType,r.address,r.city,r.state,r.zip,r.naicsCode,...r.industryIds.map(id=>INDUSTRY_BY_ID[id]?.label||"")].join(" ").toLowerCase();}
 function applyFilters(records,q){return records.filter(r=>{if(r.companyStatus!=="Active"||!q.states.includes(r.state)||!r.industryIds.length)return false;r.businessOperationIds=inferredOperations(r.naicsCode,r.industryIds);if(q.operations.length&&!r.businessOperationIds.some(x=>q.operations.includes(x)))return false;const h=textHaystack(r);if(q.includeKeywords.length&&!q.includeKeywords.some(k=>h.includes(k)))return false;if(q.excludeKeywords.some(k=>h.includes(k)))return false;return true;});}
@@ -187,19 +273,47 @@ function setPreset(id){const p=STATE_PRESETS.find(x=>x.id===id);if(!p)return;con
 function updatePresetButtons(){const s=new Set(selected("states"));document.querySelectorAll(".preset-button").forEach(b=>{const p=STATE_PRESETS.find(x=>x.id===b.dataset.preset);b.classList.toggle("active",!!p&&p.states.length===s.size&&p.states.every(x=>s.has(x)));});}
 function buildQuery(){return {industries:selected("industries"),operations:selected("operations"),states:selected("states"),includeKeywords:parseKeywords(elements.includeKeywords.value),excludeKeywords:parseKeywords(elements.excludeKeywords.value),limit:Number(document.querySelector('input[name="limit"]:checked')?.value||300)};}
 function validate(q){const a=q.industries.length>0,b=q.states.length>0;elements.industryError.hidden=a;elements.stateError.hidden=b;if(!a)$("#industries-title").scrollIntoView({behavior:"smooth",block:"center"});return a&&b;}
-function resetPanels(){elements.resultsPanel.hidden=true;elements.emptyPanel.hidden=true;elements.errorPanel.hidden=true;elements.warningList.hidden=true;elements.warningList.innerHTML="";elements.sourceStatus.innerHTML="";}
-function renderWarnings(w){elements.warningList.hidden=!w.length;elements.warningList.innerHTML=w.map(x=>`<div class="warning-item">${esc(x)}</div>`).join("");}
+function resetPanels(){elements.resultsPanel.hidden=true;elements.emptyPanel.hidden=true;elements.errorPanel.hidden=true;elements.warningList.hidden=true;elements.warningList.innerHTML="";if(elements.emptyWarningList){elements.emptyWarningList.hidden=true;elements.emptyWarningList.innerHTML="";}if(elements.diagnosticsPanel){elements.diagnosticsPanel.hidden=true;elements.diagnosticsList.innerHTML="";}elements.sourceStatus.innerHTML="";}
+function renderWarnings(w){
+  elements.warningList.hidden=!w.length;
+  elements.warningList.innerHTML=w.map(x=>`<div class="warning-item">${esc(x)}</div>`).join("");
+  if(elements.emptyWarningList){
+    elements.emptyWarningList.hidden=!w.length;
+    elements.emptyWarningList.innerHTML=w.map(x=>`<div class="warning-item">${esc(x)}</div>`).join("");
+  }
+}
+function renderDiagnostics(results){
+  if(!elements.diagnosticsPanel||!elements.diagnosticsList)return;
+  const rows=results.filter(x=>!x.skipped).map(x=>{
+    const status=x.failed?"Unavailable":`${(x.records||[]).length} raw rows`;
+    return `<div class="diagnostic-row"><strong>${esc(x.displayName||x.source)}</strong><span>${esc(status)}</span></div>`;
+  });
+  elements.diagnosticsPanel.hidden=!rows.length;
+  elements.diagnosticsList.innerHTML=rows.join("");
+}
 function renderTable(rows){const cols=CSV_COLUMNS;elements.previewTable.querySelector("thead").innerHTML=`<tr>${cols.map(c=>`<th>${esc(c[0])}</th>`).join("")}</tr>`;elements.previewTable.querySelector("tbody").innerHTML=rows.slice(0,10).map(r=>`<tr>${cols.map(c=>`<td>${esc(r[c[1]]||"")}</td>`).join("")}</tr>`).join("");}
 function renderResults(records,sources,warnings){appState.results=records;if(!records.length){elements.emptyPanel.hidden=false;renderWarnings(warnings);return;}elements.resultsPanel.hidden=false;elements.resultsSummary.textContent=`${records.length.toLocaleString()} active location-level records are ready. Previewing the first ${Math.min(10,records.length)}.`;elements.sourceSummary.innerHTML=`<strong>Sources contributing records:</strong>${esc(sources.join(" · ")||"None")}`;renderWarnings(warnings);renderTable(records);elements.resultsPanel.scrollIntoView({behavior:"smooth",block:"start"});}
 function csvEscape(v){const t=String(v??"");return /[",\n\r]/.test(t)?`"${t.replaceAll('"','""')}"`:t;}
 function exportCsv(){if(!appState.results.length)return;const h=CSV_COLUMNS.map(c=>csvEscape(c[0])).join(",");const body=appState.results.map(r=>CSV_COLUMNS.map(c=>csvEscape(r[c[1]]||"")).join(",")).join("\r\n");const blob=new Blob([`\uFEFF${h}\r\n${body}`],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");const inds=appState.query.industries.slice(0,2).map(id=>INDUSTRY_BY_ID[id]?.label||id).join("-").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase();a.href=url;a.download=`mascon_leads_${inds||"leads"}_${appState.query.states.join("-").toLowerCase()}_${new Date().toISOString().slice(0,10)}.csv`;document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);}
 
 function coverageWarnings(q){const w=[];const general=q.industries.filter(id=>!NPPES_IDS.has(id)&&!ECHO_IDS.has(id));const states=q.states.filter(s=>!["CT","NY","PA"].includes(s));if(general.length&&states.length)w.push(`Partial coverage: generic active-business registry data is not browser-accessible for ${states.join(", ")}. Those states may still return healthcare or EPA-regulated industrial facilities.`);if(q.states.includes("NJ"))w.push("New Jersey does not currently contribute a broad browser-accessible active-business registry in this static edition.");return w;}
-async function runSource(name,fn,q){setSourceStatus(name,"","Searching…");try{const x=await fn(q);if(x.skipped){setSourceStatus(name,"warn",`${name}: not selected`);return x;}setSourceStatus(name,x.records.length?"ok":"warn",`${name}: ${x.records.length} rows`);return x;}catch(e){setSourceStatus(name,"fail",`${name}: unavailable`);return {source:name,records:[],warnings:[`${name} could not be reached from this browser. The remaining sources were still searched.`],failed:true};}}
+async function runSource(name,fn,q){
+  setSourceStatus(name,"","Searching…");
+  try{
+    const x=await fn(q);
+    if(x.skipped){setSourceStatus(name,"warn",`${name}: not applicable`);return {...x,displayName:name};}
+    setSourceStatus(name,x.records.length?"ok":"warn",`${name}: ${x.records.length} rows`);
+    return {...x,displayName:name};
+  }catch(e){
+    const message=e instanceof Error?e.message:String(e);
+    setSourceStatus(name,"fail",`${name}: unavailable`);
+    return {source:name,displayName:name,records:[],warnings:[`${name} failed: ${message}`],failed:true,error:message};
+  }
+}
 async function handleSubmit(ev){ev.preventDefault();const q=buildQuery();if(!validate(q))return;appState.query=q;appState.results=[];resetPanels();elements.loadingPanel.hidden=false;elements.searchButton.disabled=true;elements.loadingMessage.textContent="Selecting compatible public data sources…";const jobs=[
   ["CT Registry",searchConnecticut],["NY Active Corporations",searchNewYork],["PA Current Businesses",searchPennsylvania],
   ["CMS NPPES",searchNppes],["EPA ECHO",searchEcho],
-];try{const results=await Promise.all(jobs.map(([n,f])=>runSource(n,f,q)));elements.loadingMessage.textContent="Combining active records and preparing the CSV…";const all=results.flatMap(x=>x.records||[]);const records=finalize(all,q);const sources=results.filter(x=>x.records?.length).map(x=>x.source);const warnings=unique([...coverageWarnings(q),...results.flatMap(x=>x.warnings||[])]);renderResults(records,sources,warnings);}catch(e){elements.errorPanel.hidden=false;elements.errorMessage.textContent=e instanceof Error?e.message:"Unexpected error";}finally{elements.loadingPanel.hidden=true;elements.searchButton.disabled=false;}}
+];try{const results=await Promise.all(jobs.map(([n,f])=>runSource(n,f,q)));elements.loadingMessage.textContent="Combining active records and preparing the CSV…";const all=results.flatMap(x=>x.records||[]);const records=finalize(all,q);const sources=results.filter(x=>x.records?.length).map(x=>x.source);const warnings=unique([...coverageWarnings(q),...results.flatMap(x=>x.warnings||[])]);renderDiagnostics(results);renderResults(records,sources,warnings);}catch(e){elements.errorPanel.hidden=false;elements.errorMessage.textContent=e instanceof Error?e.message:"Unexpected error";}finally{elements.loadingPanel.hidden=true;elements.searchButton.disabled=false;}}
 function resetForm(){elements.form.reset();setPreset("new-england");$("#limit-300").checked=true;elements.industryError.hidden=true;elements.stateError.hidden=true;resetPanels();appState.results=[];appState.query=null;window.scrollTo({top:0,behavior:"smooth"});}
 
 try{renderIndustries();renderOperations();renderStates();renderLimits();setPreset("new-england");$("#frontend-warning").hidden=true;}catch(e){$("#frontend-warning").textContent=`The interface could not initialize: ${e.message}`;throw e;}

@@ -30,7 +30,7 @@
 
     <section class="intro-card" aria-labelledby="intro-title">
       <div>
-        <p class="eyebrow">Static Edition 1.0</p>
+        <p class="eyebrow">Static Edition 1.1</p>
         <h2 id="intro-title">Build a Northeast lead list in one search</h2>
         <p>The app automatically combines browser-compatible public sources. Coverage is strongest for Connecticut, New York, Pennsylvania, healthcare organizations, and EPA-regulated industrial facilities.</p>
         <div class="coverage-grid">
@@ -135,6 +135,12 @@
       </div>
     </section>
 
+    <section id="diagnostics-panel" class="diagnostics-panel" hidden aria-labelledby="diagnostics-title">
+      <h2 id="diagnostics-title">Source check</h2>
+      <p>Raw rows returned before industry, operation, keyword, and duplicate filtering.</p>
+      <div id="diagnostics-list" class="diagnostics-list"></div>
+    </section>
+
     <section id="results-panel" class="results-panel" hidden aria-labelledby="results-title">
       <div class="results-header">
         <div>
@@ -152,7 +158,8 @@
 
     <section id="empty-panel" class="empty-panel" hidden>
       <h2>No matching active records found</h2>
-      <p>Try a broader industry selection, fewer keyword restrictions, or a different state combination.</p>
+      <p>Review the source check above. Then try leaving Include Keywords blank, selecting a state with a compatible source, or broadening the industry selection.</p>
+      <div id="empty-warning-list" class="warning-list" hidden></div>
     </section>
 
     <section id="error-panel" class="error-panel" hidden role="alert">

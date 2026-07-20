@@ -1,4 +1,4 @@
-# Mascon Lead Finder — GitHub Pages Edition
+# Mascon Lead Finder — GitHub Pages Edition v1.1
 
 A static, English-only lead research tool for Mascon Inc. It runs entirely in the browser and exports CSV files. No backend, Python environment, Netlify Functions, database, login, or API-key entry is required.
 
@@ -44,3 +44,12 @@ The first industry group includes potential blade customers such as meat and pou
 - Results are balanced across selected industries.
 - State priority is Massachusetts, then New Hampshire/Connecticut, then New York, followed by Rhode Island, New Jersey, Vermont, Maine and Pennsylvania.
 - The first 10 rows are previewed; the full selected limit is exported.
+
+
+## Version 1.1 fixes
+
+- Corrected Connecticut NAICS matching for values formatted as descriptions plus codes.
+- Removed invalid Connecticut select fields that caused the API query to fail.
+- Corrected Pennsylvania column mappings.
+- Corrected EPA ECHO active-facility handling.
+- Added a visible source diagnostic section so zero-result searches show whether each source returned raw records or failed.
