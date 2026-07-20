@@ -97,3 +97,19 @@ mascon-lead-finder/
 ├── .env.example
 └── README.md
 ```
+
+## Frontend deployment note
+
+The browser interface is intentionally bundled into the root-level `app.js`, and the logo is stored as root-level `mascon-logo.png`. This avoids missing checkbox controls caused by an unserved nested ES module or missing asset directory.
+
+Confirm these files appear at the top level of the GitHub repository before deploying:
+
+- `index.html`
+- `styles.css`
+- `app.js`
+- `mascon-logo.png`
+- `netlify.toml`
+- `netlify/functions/`
+- `shared/` (used by the serverless functions)
+
+After pushing the fix, use **Deploys → Trigger deploy → Clear cache and deploy site** in Netlify.

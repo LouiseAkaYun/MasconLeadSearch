@@ -180,3 +180,14 @@ td { color: var(--ink-700); max-width: 260px; }
   .search-actions { flex-direction: column; }
   .site-footer { gap: 10px; flex-direction: column; }
 }
+
+
+/* Deployment-safe branding and frontend diagnostics */
+.brand-lockup { flex: 0 1 470px; min-width: 240px; }
+.brand-fallback { min-width: 290px; padding: 16px 18px; border: 1px solid rgba(255,255,255,.24); border-radius: 14px; }
+.brand-fallback strong { display: block; font-size: 2.35rem; letter-spacing: .08em; color: #7fddfa; }
+.brand-fallback span { display: block; margin-top: 4px; color: rgba(255,255,255,.78); }
+.frontend-warning { margin-bottom: 18px; padding: 13px 16px; border: 1px solid #f2cc73; border-radius: 12px; background: #fff8e8; color: #704f00; line-height: 1.45; }
+.frontend-warning[hidden] { display: none !important; }
+.frontend-warning code { font-weight: 700; }
+@media (max-width: 760px) { .brand-lockup { min-width: 0; width: 100%; } }

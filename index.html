@@ -6,12 +6,18 @@
   <meta name="description" content="Mascon Lead Finder - internal government-data lead research tool." />
   <title>Mascon Lead Finder</title>
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <img class="brand-logo" src="/assets/mascon-logo.png" alt="Mascon Strategic Supply Chain Services" />
+      <div class="brand-lockup">
+        <img class="brand-logo" src="./mascon-logo.png" alt="Mascon Strategic Supply Chain Services" onerror="this.hidden=true; this.nextElementSibling.hidden=false;" />
+        <div class="brand-fallback" hidden aria-label="Mascon Strategic Supply Chain Services">
+          <strong>MASCON</strong>
+          <span>Strategic Supply Chain Services</span>
+        </div>
+      </div>
       <div class="header-copy">
         <p class="eyebrow">Internal Research Tool</p>
         <h1>Mascon Lead Finder</h1>
@@ -21,6 +27,9 @@
   </header>
 
   <main class="page-shell">
+    <div id="frontend-warning" class="frontend-warning">
+      The page controls are still loading. If this message remains, confirm that <code>app.js</code> was uploaded to the site root and redeploy.
+    </div>
     <section class="intro-card" aria-labelledby="intro-title">
       <div>
         <p class="eyebrow">Version 1.0</p>
@@ -163,6 +172,6 @@
     <span>Mascon Inc.</span>
   </footer>
 
-  <script type="module" src="/js/app.js"></script>
+  <script src="./app.js" defer></script>
 </body>
 </html>

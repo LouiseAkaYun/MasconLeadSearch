@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check js/app.js && node --check shared/presets.mjs && node --check netlify/functions/search-leads.mjs && node --check netlify/functions/lib/utils.mjs && node --check netlify/functions/lib/pipeline.mjs && node --check netlify/functions/connectors/ct-registry.mjs && node --check netlify/functions/connectors/ny-registry.mjs && node --check netlify/functions/connectors/nppes.mjs && node --check netlify/functions/connectors/epa-echo.mjs && node --check netlify/functions/connectors/fmcsa.mjs"
+    "check": "node --check app.js && node --check shared/presets.mjs && node --check netlify/functions/search-leads.mjs && node --check netlify/functions/lib/utils.mjs && node --check netlify/functions/lib/pipeline.mjs && node --check netlify/functions/connectors/ct-registry.mjs && node --check netlify/functions/connectors/ny-registry.mjs && node --check netlify/functions/connectors/nppes.mjs && node --check netlify/functions/connectors/epa-echo.mjs && node --check netlify/functions/connectors/fmcsa.mjs"
   },
   "engines": {
     "node": ">=20"
