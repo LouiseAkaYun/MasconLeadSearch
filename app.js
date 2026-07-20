@@ -439,7 +439,7 @@ async function handleSubmit(event) {
   startLoadingMessages();
 
   try {
-    const response = await fetch("/api/search-leads", {
+    const response = await fetch("/.netlify/functions/search-leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(query),

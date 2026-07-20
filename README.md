@@ -113,3 +113,42 @@ Confirm these files appear at the top level of the GitHub repository before depl
 - `shared/` (used by the serverless functions)
 
 After pushing the fix, use **Deploys → Trigger deploy → Clear cache and deploy site** in Netlify.
+
+## Troubleshooting a 404 search error
+
+The frontend now calls the Netlify Function directly at:
+
+```text
+/.netlify/functions/search-leads
+```
+
+After deployment, confirm the function layer is present by opening:
+
+```text
+https://YOUR-SITE.netlify.app/.netlify/functions/health
+```
+
+Expected response:
+
+```json
+{"ok":true,"service":"Mascon Lead Finder","function":"health"}
+```
+
+If that URL returns 404, the functions were not deployed. Confirm that these paths are in the repository root (not inside an extra nested project folder):
+
+```text
+netlify.toml
+netlify/functions/health.mjs
+netlify/functions/search-leads.mjs
+```
+
+In Netlify Build settings use:
+
+```text
+Base directory: blank
+Build command: blank
+Publish directory: .
+Functions directory: netlify/functions
+```
+
+Then choose **Deploys → Trigger deploy → Clear cache and deploy site**.
